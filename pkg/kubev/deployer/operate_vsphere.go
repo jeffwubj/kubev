@@ -6,10 +6,23 @@
 
 package deployer
 
-import "jeffwubj/kubev/pkg/kubev/model"
+import (
+	"context"
+	"jeffwubj/kubev/pkg/kubev/driver"
+	"jeffwubj/kubev/pkg/kubev/model"
+
+	"github.com/davecgh/go-spew/spew"
+)
 
 func DeployOVA(answers model.Answers) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	client, err := driver.NewClient(ctx, answers)
+	if err != nil {
+		return err
+	}
+	spew.Dump(client.IsVC())
 	return nil
 }
 

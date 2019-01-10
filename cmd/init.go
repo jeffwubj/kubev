@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+	"jeffwubj/kubev/pkg/kubev/deployer"
 	"jeffwubj/kubev/pkg/kubev/model"
 
 	"github.com/spf13/cobra"
@@ -49,80 +50,68 @@ var initCmd = &cobra.Command{
 
 var qs = []*survey.Question{
 	{
-		Name:      "serverurl",
-		Prompt:    &survey.Input{Message: descriptions["serverurl"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "serverurl",
+		Prompt:   &survey.Input{Message: descriptions["serverurl"]},
+		Validate: survey.Required,
 	},
 	{
 		Name:   "port",
 		Prompt: &survey.Input{Message: descriptions["port"]},
 	},
 	{
-		Name:      "username",
-		Prompt:    &survey.Input{Message: descriptions["username"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "username",
+		Prompt:   &survey.Input{Message: descriptions["username"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "password",
-		Prompt:    &survey.Input{Message: descriptions["password"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "password",
+		Prompt:   &survey.Input{Message: descriptions["password"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "datacenter",
-		Prompt:    &survey.Input{Message: descriptions["datacenter"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "datacenter",
+		Prompt:   &survey.Input{Message: descriptions["datacenter"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "datastore",
-		Prompt:    &survey.Input{Message: descriptions["datastore"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "datastore",
+		Prompt:   &survey.Input{Message: descriptions["datastore"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "cluster",
-		Prompt:    &survey.Input{Message: descriptions["cluster"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "cluster",
+		Prompt:   &survey.Input{Message: descriptions["cluster"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "resourcepool",
-		Prompt:    &survey.Input{Message: descriptions["resourcepool"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "resourcepool",
+		Prompt:   &survey.Input{Message: descriptions["resourcepool"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "path",
-		Prompt:    &survey.Input{Message: descriptions["path"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "path",
+		Prompt:   &survey.Input{Message: descriptions["path"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "cpu",
-		Prompt:    &survey.Input{Message: descriptions["cpu"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "cpu",
+		Prompt:   &survey.Input{Message: descriptions["cpu"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "memory",
-		Prompt:    &survey.Input{Message: descriptions["memory"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "memory",
+		Prompt:   &survey.Input{Message: descriptions["memory"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "network",
-		Prompt:    &survey.Input{Message: descriptions["network"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "network",
+		Prompt:   &survey.Input{Message: descriptions["network"]},
+		Validate: survey.Required,
 	},
 	{
-		Name:      "kubernetesversion",
-		Prompt:    &survey.Input{Message: descriptions["kubernetesversion"]},
-		Validate:  survey.Required,
-		Transform: survey.Title,
+		Name:     "kubernetesversion",
+		Prompt:   &survey.Input{Message: descriptions["kubernetesversion"]},
+		Validate: survey.Required,
 	},
 }
 
@@ -151,6 +140,10 @@ func runStart(cmd *cobra.Command, args []string) {
 		answers.Username == "" ||
 		answers.Password == "" {
 		answers = interactiveSetConfig()
+	}
+
+	if err := deployer.DeployMasterNode(answers); err != nil {
+		fmt.Println(err.Error())
 	}
 }
 
