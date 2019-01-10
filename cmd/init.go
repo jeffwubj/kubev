@@ -1,0 +1,201 @@
+// Copyright © 2019 Jeff Wu <jeff.wu.junfei@gmail.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cmd
+
+import (
+	"fmt"
+	"jeffwubj/kubev/pkg/kubev/model"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"gopkg.in/AlecAivazis/survey.v1"
+)
+
+var descriptions = map[string]string{
+	"serverurl":         "vCenter/ESX URL Ex: 10.192.10.30 or myvcenter.io",
+	"port":              "vCenter/ESX port",
+	"username":          "vCenter/ESX username",
+	"password":          "vCenter/ESX password",
+	"datacenter":        "Datacenter",
+	"datastore":         "Datastore",
+	"cluster":           "Cluster",
+	"resourcepool":      "Resource pool to hold Kubernetese nodes, input none to not use resource pool",
+	"path":              "VM Folder name or Path",
+	"cpu":               "Number of vCPUs for each VM, at least 2",
+	"memory":            "Memory for each VM (MB)",
+	"network":           "Network for each VM, default [VM Network]",
+	"kubernetesversion": "Kubernetes version, e.g. [v1.13.0]",
+}
+
+// initCmd represents the init command
+var initCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Initialize a Kubernetes installation on vSphere or ESX.",
+	Long:  ``,
+	Run:   runStart,
+}
+
+var qs = []*survey.Question{
+	{
+		Name:      "serverurl",
+		Prompt:    &survey.Input{Message: descriptions["serverurl"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:   "port",
+		Prompt: &survey.Input{Message: descriptions["port"]},
+	},
+	{
+		Name:      "username",
+		Prompt:    &survey.Input{Message: descriptions["username"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "password",
+		Prompt:    &survey.Input{Message: descriptions["password"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "datacenter",
+		Prompt:    &survey.Input{Message: descriptions["datacenter"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "datastore",
+		Prompt:    &survey.Input{Message: descriptions["datastore"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "cluster",
+		Prompt:    &survey.Input{Message: descriptions["cluster"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "resourcepool",
+		Prompt:    &survey.Input{Message: descriptions["resourcepool"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "path",
+		Prompt:    &survey.Input{Message: descriptions["path"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "cpu",
+		Prompt:    &survey.Input{Message: descriptions["cpu"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "memory",
+		Prompt:    &survey.Input{Message: descriptions["memory"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "network",
+		Prompt:    &survey.Input{Message: descriptions["network"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+	{
+		Name:      "kubernetesversion",
+		Prompt:    &survey.Input{Message: descriptions["kubernetesversion"]},
+		Validate:  survey.Required,
+		Transform: survey.Title,
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(initCmd)
+
+	initCmd.Flags().String("serverurl", "", descriptions["serverurl"])
+	initCmd.Flags().Int("port", 443, descriptions["port"])
+	initCmd.Flags().String("username", "", descriptions["username"])
+	initCmd.Flags().String("password", "", descriptions["password"])
+	initCmd.Flags().String("datacenter", "", descriptions["datacenter"])
+	initCmd.Flags().String("datastore", "", descriptions["datastore"])
+	initCmd.Flags().String("cluster", "", descriptions["cluster"])
+	initCmd.Flags().String("resourcepool", "", descriptions["resourcepool"])
+	initCmd.Flags().String("path", "", descriptions["path"])
+	initCmd.Flags().Int("cpu", 2, descriptions["cpu"])
+	initCmd.Flags().Int("memory", 2048, descriptions["memory"])
+	initCmd.Flags().String("network", "", descriptions["network"])
+	initCmd.Flags().String("kubernetesversion", "", descriptions["kubernetesversion"])
+	viper.BindPFlags(initCmd.Flags())
+}
+
+func runStart(cmd *cobra.Command, args []string) {
+	answers := readConfig()
+	if answers.Serverurl == "" ||
+		answers.Username == "" ||
+		answers.Password == "" {
+		answers = interactiveSetConfig()
+	}
+}
+
+func readConfig() model.Answers {
+	return model.Answers{
+		Serverurl:         viper.GetString("serverurl"),
+		Port:              viper.GetInt("port"),
+		Username:          viper.GetString("username"),
+		Password:          viper.GetString("password"),
+		Datacenter:        viper.GetString("datacenter"),
+		Datastore:         viper.GetString("datastore"),
+		Cluster:           viper.GetString("cluster"),
+		Resourcepool:      viper.GetString("resourcepool"),
+		Path:              viper.GetString("path"),
+		Cpu:               viper.GetInt("cpu"),
+		Memory:            viper.GetInt("memory"),
+		Network:           viper.GetString("network"),
+		KubernetesVersion: viper.GetString("kubernetesversion"),
+	}
+}
+
+func interactiveSetConfig() model.Answers {
+	// perform the questions
+	answers := model.Answers{}
+	err := survey.Ask(qs, &answers)
+	if err != nil {
+		fmt.Println(err.Error())
+		return answers
+	}
+
+	viper.Set("serverurl", answers.Serverurl)
+	viper.Set("port", answers.Port)
+	viper.Set("username", answers.Username)
+	viper.Set("password", answers.Password)
+	viper.Set("datacenter", answers.Datacenter)
+	viper.Set("datastore", answers.Datastore)
+	viper.Set("cluster", answers.Cluster)
+	viper.Set("resourcepool", answers.Resourcepool)
+	viper.Set("path", answers.Path)
+	viper.Set("cpu", answers.Cpu)
+	viper.Set("memory", answers.Memory)
+	viper.Set("network", answers.Network)
+	viper.Set("kubernetesVersion", answers.KubernetesVersion)
+
+	viper.WriteConfigAs("kubevconfig")
+	viper.WriteConfigAs(viper.ConfigFileUsed())
+	return answers
+}
