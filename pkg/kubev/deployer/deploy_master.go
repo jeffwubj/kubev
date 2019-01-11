@@ -3,12 +3,16 @@
 package deployer
 
 import (
+	"fmt"
+
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
 )
 
 func DeployMasterNode(answers model.Answers) error {
-	if err := DeployOVA(answers); err != nil {
+	o, err := DeployOVA(answers)
+	if err != nil {
 		return err
 	}
+	fmt.Println(o.String() + " deployed")
 	return nil
 }

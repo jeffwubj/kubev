@@ -6,7 +6,6 @@ import (
 	"runtime"
 
 	homedir "github.com/mitchellh/go-homedir"
-	minikubeConstants "k8s.io/minikube/pkg/minikube/constants"
 )
 
 const KubeletService = `
@@ -143,5 +142,9 @@ func GetK8sKitReleaseURL(binaryName, version string) string {
 		}
 		return fmt.Sprintf("https://storage.googleapis.com/kubernetes-release/release/%s/bin/linux/%s/%s", version, runtime.GOARCH, binaryName)
 	}
-	return minikubeConstants.GetKubernetesReleaseURL(binaryName, version)
+	return GetKubernetesReleaseURL(binaryName, version)
+}
+
+func GetKubernetesReleaseURL(binaryName, version string) string {
+	return fmt.Sprintf("https://kubernetes.oss-cn-hangzhou.aliyuncs.com/kubernetes-release/release/%s/bin/linux/%s/%s", version, runtime.GOARCH, binaryName)
 }

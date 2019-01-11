@@ -2,12 +2,12 @@ package cacher
 
 import (
 	"fmt"
-	"jeffwubj/kubev/pkg/kubev/constants"
 	"os"
 	"path"
-	"vmware/f8s/pkg/utils"
 
-	download "github.com/JeffWuBJ/go-download"
+	download "github.com/jeffwubj/go-download"
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
+	"github.com/jeffwubj/kubev/pkg/kubev/utils"
 	"github.com/mholt/archiver"
 )
 
