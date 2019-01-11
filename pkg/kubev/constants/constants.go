@@ -117,6 +117,13 @@ func GetLocalK8sKitPath(binaryName, version string) string {
 	return path.Join(GetKubeVHomeFolder(), "cache", binaryName, version)
 }
 
+func GetLocalK8sKitFilePath(binaryName, version string) string {
+	if binaryName == DockerBinaryName {
+		return path.Join(GetKubeVHomeFolder(), "cache", binaryName, version, binaryName, binaryName)
+	}
+	return path.Join(GetKubeVHomeFolder(), "cache", binaryName, version, binaryName)
+}
+
 func GetK8sKitReleaseURL(binaryName, version string) string {
 	if binaryName == KubeCtlBinaryName {
 		return fmt.Sprintf("https://storage.googleapis.com/kubernetes-release/release/%s/bin/%s/amd64/kubectl", version, runtime.GOOS)

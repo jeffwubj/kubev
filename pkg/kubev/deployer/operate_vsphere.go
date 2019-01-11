@@ -8,10 +8,18 @@ package deployer
 
 import (
 	"context"
-	"jeffwubj/kubev/pkg/kubev/driver"
-	"jeffwubj/kubev/pkg/kubev/model"
+	"fmt"
+	"io/ioutil"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
+	"github.com/jeffwubj/kubev/pkg/kubev/driver"
+	"github.com/jeffwubj/kubev/pkg/kubev/model"
+	"github.com/vmware/govmomi/find"
+	"github.com/vmware/govmomi/govc/importx"
+	"github.com/vmware/govmomi/ovf"
+	"github.com/vmware/govmomi/vim25/soap"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
 func DeployOVA(answers model.Answers) error {
@@ -22,7 +30,115 @@ func DeployOVA(answers model.Answers) error {
 	if err != nil {
 		return err
 	}
-	spew.Dump(client.IsVC())
+
+	finder := find.NewFinder(client.Client, true)
+	datacenter, err := finder.Datacenter(ctx, answers.Datacenter)
+	if err != nil {
+		return err
+	}
+
+	finder.SetDatacenter(datacenter)
+	datastore, err := finder.Datastore(ctx, answers.Datastore)
+	if err != nil {
+		return err
+	}
+
+	resourcepool, err := finder.ResourcePool(ctx, answers.Resourcepool)
+	if err != nil {
+		return err
+	}
+
+	folders, err := datacenter.Folders(context.TODO())
+	if err != nil {
+		return err
+	}
+
+	folder := folders.VmFolder
+
+	fpath := constants.GetLocalK8sKitFilePath(constants.PhotonOVAName, constants.DefaultPhotonVersion)
+
+	fmt.Println(fpath)
+	fmt.Println(datacenter.Name())
+	fmt.Println(datastore.Name())
+	fmt.Println(resourcepool.Name())
+	fmt.Println(folder.Name())
+
+	archive := &importx.TapeArchive{}
+	archive.SetPath(fpath)
+	archive.Client = client.Client
+	r, _, err := archive.Open("*.ovf")
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	o, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	// e, err := ovf.Unmarshal(bytes.NewReader(o))
+	// if err != nil {
+	// 	return err
+	// }
+
+	// spew.Dump(e.Network)
+
+	var networks []types.OvfNetworkMapping
+
+	network, err := finder.Network(ctx, answers.Network)
+	if err != nil {
+		return err
+	}
+
+	networks = append(networks, types.OvfNetworkMapping{
+		Name:    answers.Network,
+		Network: network.Reference(),
+	})
+
+	cisp := types.OvfCreateImportSpecParams{
+		DiskProvisioning:   "",
+		EntityName:         "kube-template",
+		IpAllocationPolicy: "",
+		IpProtocol:         "",
+		OvfManagerCommonParams: types.OvfManagerCommonParams{
+			DeploymentOption: "",
+			Locale:           "US"},
+		PropertyMapping: nil,
+		NetworkMapping:  networks,
+	}
+
+	m := ovf.NewManager(client.Client)
+	spec, err := m.CreateImportSpec(ctx, string(o), resourcepool, datastore, cisp)
+	if err != nil {
+		return err
+	}
+
+	lease, err := resourcepool.ImportVApp(ctx, spec.ImportSpec, folder, nil)
+	if err != nil {
+		return err
+	}
+	info, err := lease.Wait(ctx, spec.FileItem)
+	if err != nil {
+		return err
+	}
+	u := lease.StartUpdater(ctx, info)
+	defer u.Done()
+	for _, i := range info.Items {
+		f, size, err := archive.Open(i.Path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		opts := soap.Upload{
+			ContentLength: size,
+		}
+		lease.Upload(ctx, i, f, opts)
+	}
+
+	spew.Dump(info.Entity)
+	lease.Complete(ctx)
+
+	spew.Dump(spec.Error)
+
 	return nil
 }
 

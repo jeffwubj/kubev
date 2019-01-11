@@ -14,7 +14,7 @@
 
 package main
 
-import "jeffwubj/kubev/cmd"
+import "github.com/jeffwubj/kubev/cmd"
 
 func main() {
 	cmd.Execute()

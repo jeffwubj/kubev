@@ -3,7 +3,7 @@
 package deployer
 
 import (
-	"jeffwubj/kubev/pkg/kubev/model"
+	"github.com/jeffwubj/kubev/pkg/kubev/model"
 )
 
 func DeployMasterNode(answers model.Answers) error {

@@ -16,10 +16,10 @@ package cmd
 
 import (
 	"fmt"
-	"jeffwubj/kubev/pkg/kubev/constants"
 	"os"
 	"path"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

@@ -5,9 +5,9 @@ package driver
 import (
 	"context"
 	"fmt"
-	"jeffwubj/kubev/pkg/kubev/model"
 	"net/url"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/vmware/govmomi"
 )
 

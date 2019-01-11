@@ -16,9 +16,9 @@ package cmd
 
 import (
 	"fmt"
-	"jeffwubj/kubev/pkg/kubev/deployer"
-	"jeffwubj/kubev/pkg/kubev/model"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
+	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/AlecAivazis/survey.v1"
@@ -143,6 +143,7 @@ func runStart(cmd *cobra.Command, args []string) {
 	}
 
 	if err := deployer.DeployMasterNode(answers); err != nil {
+		fmt.Println("Deploy master failed...")
 		fmt.Println(err.Error())
 	}
 }
