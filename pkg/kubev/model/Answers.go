@@ -9,7 +9,7 @@ type Answers struct {
 	Datastore         string
 	Cluster           string
 	Resourcepool      string
-	Path              string
+	Folder            string
 	Cpu               int
 	Memory            int
 	Network           string

@@ -11,7 +11,7 @@ import (
 	"github.com/vmware/govmomi"
 )
 
-func NewClient(ctx context.Context, answers model.Answers) (*govmomi.Client, error) {
+func NewClient(ctx context.Context, answers *model.Answers) (*govmomi.Client, error) {
 	serverurl := url.URL{
 		Scheme: "https",
 		Path:   fmt.Sprintf("%s:%d/sdk", answers.Serverurl, answers.Port),

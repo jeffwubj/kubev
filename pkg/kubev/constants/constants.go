@@ -101,6 +101,7 @@ const (
 	KubeletServiceFile       = "/etc/systemd/system/kubelet.service"
 	KubeletSystemdConfFile   = "/etc/systemd/system/kubelet.service.d/10-kubeadm.conf"
 	DockerServiceFile        = "/usr/lib/systemd/system/docker.service"
+	DefaultVMTemplateName    = "kube-template"
 )
 
 func GetHomeFolder() string {

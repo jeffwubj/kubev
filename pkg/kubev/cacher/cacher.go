@@ -65,8 +65,8 @@ func cache(force bool, kitName, kitVersion string) (string, error) {
 		},
 	}
 
-	fmt.Println(url)
-	fmt.Println(targetFilepath)
+	// fmt.Println(url)
+	// fmt.Println(targetFilepath)
 	fmt.Printf("Downloading %s %s\n", kitName, kitVersion)
 
 	if kitName == constants.CriCtlBinaryName || kitName == constants.DockerBinaryName {

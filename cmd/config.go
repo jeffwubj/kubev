@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -33,19 +32,19 @@ var descriptions = map[string]string{
 	"datastore":         "Datastore",
 	"cluster":           "Cluster",
 	"resourcepool":      "Resource pool to hold Kubernetese nodes, input none to not use resource pool",
-	"path":              "VM Folder name or Path",
+	"folder":            "VM Folder name",
 	"cpu":               "Number of vCPUs for each VM, at least 2",
 	"memory":            "Memory for each VM (MB)",
 	"network":           "Network for each VM, default [VM Network]",
 	"kubernetesversion": "Kubernetes version, e.g. [v1.13.0]",
 }
 
-// initCmd represents the init command
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialize a Kubernetes installation on vSphere or ESX.",
-	Long:  ``,
-	Run:   runStart,
+// configCmd represents the config command
+var configCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Configure a Kubernetes installation on vSphere or ESX.",
+	Long:  `The whole procedure includes two phases: 1st config, 2nd deploy`,
+	Run:   runConfig,
 }
 
 var qs = []*survey.Question{
@@ -89,8 +88,8 @@ var qs = []*survey.Question{
 		Validate: survey.Required,
 	},
 	{
-		Name:     "path",
-		Prompt:   &survey.Input{Message: descriptions["path"]},
+		Name:     "folder",
+		Prompt:   &survey.Input{Message: descriptions["folder"]},
 		Validate: survey.Required,
 	},
 	{
@@ -116,54 +115,26 @@ var qs = []*survey.Question{
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(configCmd)
 
-	initCmd.Flags().String("serverurl", "", descriptions["serverurl"])
-	initCmd.Flags().Int("port", 443, descriptions["port"])
-	initCmd.Flags().String("username", "", descriptions["username"])
-	initCmd.Flags().String("password", "", descriptions["password"])
-	initCmd.Flags().String("datacenter", "", descriptions["datacenter"])
-	initCmd.Flags().String("datastore", "", descriptions["datastore"])
-	initCmd.Flags().String("cluster", "", descriptions["cluster"])
-	initCmd.Flags().String("resourcepool", "", descriptions["resourcepool"])
-	initCmd.Flags().String("path", "", descriptions["path"])
-	initCmd.Flags().Int("cpu", 2, descriptions["cpu"])
-	initCmd.Flags().Int("memory", 2048, descriptions["memory"])
-	initCmd.Flags().String("network", "", descriptions["network"])
-	initCmd.Flags().String("kubernetesversion", "", descriptions["kubernetesversion"])
-	viper.BindPFlags(initCmd.Flags())
+	configCmd.Flags().String("serverurl", "", descriptions["serverurl"])
+	configCmd.Flags().Int("port", 443, descriptions["port"])
+	configCmd.Flags().String("username", "", descriptions["username"])
+	configCmd.Flags().String("password", "", descriptions["password"])
+	configCmd.Flags().String("datacenter", "", descriptions["datacenter"])
+	configCmd.Flags().String("datastore", "", descriptions["datastore"])
+	configCmd.Flags().String("cluster", "", descriptions["cluster"])
+	configCmd.Flags().String("resourcepool", "", descriptions["resourcepool"])
+	configCmd.Flags().String("folder", "", descriptions["folder"])
+	configCmd.Flags().Int("cpu", 2, descriptions["cpu"])
+	configCmd.Flags().Int("memory", 2048, descriptions["memory"])
+	configCmd.Flags().String("network", "", descriptions["network"])
+	configCmd.Flags().String("kubernetesversion", "", descriptions["kubernetesversion"])
+	viper.BindPFlags(configCmd.Flags())
 }
 
-func runStart(cmd *cobra.Command, args []string) {
-	answers := readConfig()
-	if answers.Serverurl == "" ||
-		answers.Username == "" ||
-		answers.Password == "" {
-		answers = interactiveSetConfig()
-	}
-
-	if err := deployer.DeployMasterNode(answers); err != nil {
-		fmt.Println("Deploy master failed...")
-		fmt.Println(err.Error())
-	}
-}
-
-func readConfig() model.Answers {
-	return model.Answers{
-		Serverurl:         viper.GetString("serverurl"),
-		Port:              viper.GetInt("port"),
-		Username:          viper.GetString("username"),
-		Password:          viper.GetString("password"),
-		Datacenter:        viper.GetString("datacenter"),
-		Datastore:         viper.GetString("datastore"),
-		Cluster:           viper.GetString("cluster"),
-		Resourcepool:      viper.GetString("resourcepool"),
-		Path:              viper.GetString("path"),
-		Cpu:               viper.GetInt("cpu"),
-		Memory:            viper.GetInt("memory"),
-		Network:           viper.GetString("network"),
-		KubernetesVersion: viper.GetString("kubernetesversion"),
-	}
+func runConfig(cmd *cobra.Command, args []string) {
+	interactiveSetConfig()
 }
 
 func interactiveSetConfig() model.Answers {
@@ -183,7 +154,7 @@ func interactiveSetConfig() model.Answers {
 	viper.Set("datastore", answers.Datastore)
 	viper.Set("cluster", answers.Cluster)
 	viper.Set("resourcepool", answers.Resourcepool)
-	viper.Set("path", answers.Path)
+	viper.Set("folder", answers.Folder)
 	viper.Set("cpu", answers.Cpu)
 	viper.Set("memory", answers.Memory)
 	viper.Set("network", answers.Network)
