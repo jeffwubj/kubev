@@ -37,6 +37,7 @@ var descriptions = map[string]string{
 	"memory":            "Memory for each VM (MB)",
 	"network":           "Network for each VM, default [VM Network]",
 	"kubernetesversion": "Kubernetes version, e.g. [v1.13.0]",
+	"workernodes":       "Worker nodes number",
 }
 
 // configCmd represents the config command
@@ -112,6 +113,11 @@ var qs = []*survey.Question{
 		Prompt:   &survey.Input{Message: descriptions["kubernetesversion"]},
 		Validate: survey.Required,
 	},
+	{
+		Name:     "workernodes",
+		Prompt:   &survey.Input{Message: descriptions["workernodes"]},
+		Validate: survey.Required,
+	},
 }
 
 func init() {
@@ -130,6 +136,7 @@ func init() {
 	configCmd.Flags().Int("memory", 2048, descriptions["memory"])
 	configCmd.Flags().String("network", "", descriptions["network"])
 	configCmd.Flags().String("kubernetesversion", "", descriptions["kubernetesversion"])
+	configCmd.Flags().Int("workernodes", 5, descriptions["workernodes"])
 	viper.BindPFlags(configCmd.Flags())
 }
 
@@ -159,8 +166,8 @@ func interactiveSetConfig() model.Answers {
 	viper.Set("memory", answers.Memory)
 	viper.Set("network", answers.Network)
 	viper.Set("kubernetesVersion", answers.KubernetesVersion)
+	viper.Set("workernodes", answers.WorkerNodes)
 
-	viper.WriteConfigAs("kubevconfig")
 	viper.WriteConfigAs(viper.ConfigFileUsed())
 	return answers
 }

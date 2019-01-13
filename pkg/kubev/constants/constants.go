@@ -113,8 +113,20 @@ func GetKubeVHomeFolder() string {
 	return path.Join(GetHomeFolder(), ".kubev")
 }
 
+func GetK8sNodesConfigFilePath() string {
+	return path.Join(GetKubeVHomeFolder(), "config.json")
+}
+
 func GetLocalK8sKitPath(binaryName, version string) string {
 	return path.Join(GetKubeVHomeFolder(), "cache", binaryName, version)
+}
+
+func GetVMPrivateKeyPath() string {
+	return path.Join(GetKubeVHomeFolder(), "id_rsa")
+}
+
+func GetVMPublicKeyPath() string {
+	return GetVMPrivateKeyPath() + ".pub"
 }
 
 func GetLocalK8sKitFilePath(binaryName, version string) string {

@@ -152,7 +152,7 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 	return vm, nil
 }
 
-func CloneVM(answers *model.Answers) (*object.VirtualMachine, error) {
+func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMachine, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -177,62 +177,76 @@ func CloneVM(answers *model.Answers) (*object.VirtualMachine, error) {
 		return nil, err
 	}
 
-	tempaltePath := getTemplateVMPath(answers)
-	vm, err := finder.VirtualMachine(ctx, tempaltePath)
+	clonedVM, err := finder.VirtualMachine(ctx, path.Join(getVMFolder(answers), vmConfig.VMName))
+	if err != nil {
+		tempaltePath := getTemplateVMPath(answers)
+		vm, err := finder.VirtualMachine(ctx, tempaltePath)
+		if err != nil {
+			return nil, err
+		}
+
+		configSpecs := []types.BaseVirtualDeviceConfigSpec{}
+
+		folder, err := finder.Folder(ctx, getVMFolder(answers))
+		if err != nil {
+			return nil, err
+		}
+
+		folderref := folder.Reference()
+		resourcepoolref := resourcepool.Reference()
+		datastoreref := datastore.Reference()
+
+		relocateSpec := types.VirtualMachineRelocateSpec{
+			DeviceChange: configSpecs,
+			Folder:       &folderref,
+			Pool:         &resourcepoolref,
+			Datastore:    &datastoreref,
+		}
+
+		cloneSpec := &types.VirtualMachineCloneSpec{
+			PowerOn:  false,
+			Template: false,
+		}
+		cloneSpec.Location = relocateSpec
+
+		// Clone vm to another vm
+		task, err := vm.Clone(ctx, folder, vmConfig.VMName, *cloneSpec)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = task.WaitForResult(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		clonedVM, err = finder.VirtualMachine(ctx, path.Join(getVMFolder(answers), vmConfig.VMName))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	powerstate, err := clonedVM.PowerState(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// devices, err := vm.Device(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	configSpecs := []types.BaseVirtualDeviceConfigSpec{}
-
-	folder, err := finder.Folder(ctx, getVMFolder(answers))
-	if err != nil {
-		return nil, err
-	}
-
-	folderref := folder.Reference()
-	resourcepoolref := resourcepool.Reference()
-	datastoreref := datastore.Reference()
-
-	relocateSpec := types.VirtualMachineRelocateSpec{
-		DeviceChange: configSpecs,
-		Folder:       &folderref,
-		Pool:         &resourcepoolref,
-		Datastore:    &datastoreref,
-	}
-
-	cloneSpec := &types.VirtualMachineCloneSpec{
-		PowerOn:  false,
-		Template: false,
-	}
-	cloneSpec.Location = relocateSpec
-
-	// Clone vm to another vm
-	task, err := vm.Clone(ctx, folder, "kubev-master", *cloneSpec)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = task.WaitForResult(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	clonedVM, err := finder.VirtualMachine(ctx, path.Join(getVMFolder(answers), "kubev-master"))
-	if err != nil {
-		return nil, err
+	if powerstate == types.VirtualMachinePowerStatePoweredOn {
+		task, err := clonedVM.PowerOff(ctx)
+		if err != nil {
+			return nil, err
+		}
+		_, err = task.WaitForResult(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	vmConfigSpec := types.VirtualMachineConfigSpec{}
 	vmConfigSpec.NumCPUs = int32(answers.Cpu)
 	vmConfigSpec.MemoryMB = int64(answers.Memory)
 	clonedVM.Reconfigure(ctx, vmConfigSpec)
-
-	task, err = clonedVM.PowerOn(ctx)
+	task, err := clonedVM.PowerOn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -240,11 +254,19 @@ func CloneVM(answers *model.Answers) (*object.VirtualMachine, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	ip, err := clonedVM.WaitForIP(ctx)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("ip is " + ip)
+
+	vmConfig.DatacenterName = datacenter.Name()
+	vmConfig.DatastoreName = datastore.Name()
+	vmConfig.FolderPath = clonedVM.InventoryPath
+	vmConfig.IP = ip
+	vmConfig.Mo = clonedVM.Reference().String()
+
+	// spew.Dump(vmConfig)
 
 	return clonedVM, nil
 }

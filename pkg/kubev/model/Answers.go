@@ -14,4 +14,5 @@ type Answers struct {
 	Memory            int
 	Network           string
 	KubernetesVersion string
+	WorkerNodes       int
 }

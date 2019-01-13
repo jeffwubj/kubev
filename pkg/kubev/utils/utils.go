@@ -1,17 +1,16 @@
 package utils
 
 import (
+	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
+	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/phayes/permbits"
-	"github.com/spf13/viper"
 )
-
-// SaveConfig saves Viper configurations into config file that is in use
-func SaveConfig() {
-	viper.WriteConfigAs(viper.ConfigFileUsed())
-}
 
 // BinaryExists checks whether binary exists with executable permission
 func BinaryExists(path string) (bool, error) {
@@ -71,6 +70,74 @@ func MakeBinaryExecutable(targetFilepath string) error {
 	err = permbits.Chmod(targetFilepath, permissions)
 	if err != nil {
 		return errors.New("error setting permission on file")
+	}
+	return nil
+}
+
+func ReadK8sNodes() (*model.K8sNodes, error) {
+	var cc model.K8sNodes
+
+	path := constants.GetK8sNodesConfigFilePath()
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return &cc, err
+	}
+
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return &cc, err
+	}
+
+	if err := json.Unmarshal(data, &cc); err != nil {
+		return &cc, err
+	}
+	return &cc, nil
+}
+
+func SaveK8sNodes(config *model.K8sNodes) error {
+	data, err := json.MarshalIndent(config, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	profileConfigFile := constants.GetK8sNodesConfigFilePath()
+
+	if err := os.MkdirAll(filepath.Dir(profileConfigFile), 0700); err != nil {
+		return err
+	}
+
+	if err := saveConfigToFile(data, profileConfigFile); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func saveConfigToFile(data []byte, file string) error {
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		return ioutil.WriteFile(file, data, 0600)
+	}
+
+	tmpfi, err := ioutil.TempFile(filepath.Dir(file), "config.json.tmp")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpfi.Name())
+
+	if err = ioutil.WriteFile(tmpfi.Name(), data, 0600); err != nil {
+		return err
+	}
+
+	if err = tmpfi.Close(); err != nil {
+		return err
+	}
+
+	if err = os.Remove(file); err != nil {
+		return err
+	}
+
+	if err = os.Rename(tmpfi.Name(), file); err != nil {
+		return err
 	}
 	return nil
 }

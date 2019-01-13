@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jeffwubj/kubev/pkg/kubev/cacher"
 	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
@@ -52,11 +53,13 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	}
 	cacher.CacheAll(viper.GetString("kubernetesversion"))
 
-	if err := deployer.DeployMasterNode(answers); err != nil {
-		fmt.Println("Deploy master failed...")
+	vms, err := deployer.DeployNodes(answers)
+	if err != nil {
+		fmt.Println("Deploy nodes failed...")
 		fmt.Println(err.Error())
+		return
 	}
-
+	spew.Dump(vms)
 }
 
 func readConfig() (*model.Answers, error) {
@@ -81,5 +84,6 @@ func readConfig() (*model.Answers, error) {
 		Memory:            viper.GetInt("memory"),
 		Network:           viper.GetString("network"),
 		KubernetesVersion: viper.GetString("kubernetesversion"),
+		WorkerNodes:       viper.GetInt("workernodes"),
 	}, nil
 }
