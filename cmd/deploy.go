@@ -46,6 +46,12 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	vms, err := utils.ReadK8sNodes()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
 	answers, err := readConfig()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -53,13 +59,15 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	}
 	cacher.CacheAll(viper.GetString("kubernetesversion"))
 
-	vms, err := deployer.DeployNodes(answers)
+	vms, err = deployer.DeployNodes(answers)
 	if err != nil {
 		fmt.Println("Deploy nodes failed...")
 		fmt.Println(err.Error())
 		return
 	}
+
 	spew.Dump(vms)
+	utils.SaveK8sNodes(vms)
 }
 
 func readConfig() (*model.Answers, error) {

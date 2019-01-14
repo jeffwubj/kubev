@@ -17,8 +17,12 @@ import (
 )
 
 func ConfigVM(vmconfig *model.K8sNode) error {
-
 	fmt.Printf("config VM %s:%s\n", vmconfig.VMName, vmconfig.IP)
+	if !needConfigPhoton(vmconfig.IP) {
+		fmt.Printf("no need to change password of %s\n", vmconfig.IP)
+		return nil
+	}
+
 	if err := changePhotonDefaultPassword(vmconfig.IP); err != nil {
 		fmt.Println("change password failed")
 		return err
@@ -34,7 +38,16 @@ func ConfigVM(vmconfig *model.K8sNode) error {
 	return nil
 }
 
+func needConfigPhoton(ipAddress string) bool {
+	err := executeSSHCommand("echo", "root", "kubernetes", ipAddress)
+	if err != nil {
+		return true
+	}
+	return false
+}
+
 func changePhotonDefaultPassword(ipAddress string) error {
+
 	if err := modify_known_hosts(ipAddress); err != nil {
 		return err
 	}

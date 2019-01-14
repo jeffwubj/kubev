@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"vmware/f8s/pkg/utils"
 
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
@@ -79,8 +80,8 @@ func ReadK8sNodes() (*model.K8sNodes, error) {
 
 	path := constants.GetK8sNodesConfigFilePath()
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return &cc, err
+	if !utils.FileExists(path) {
+		return &cc, nil
 	}
 
 	data, err := ioutil.ReadFile(path)

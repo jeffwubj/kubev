@@ -45,10 +45,8 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 	}
 
 	tempaltePath := getTemplateVMPath(answers)
-	fmt.Println("try to find template vm " + tempaltePath)
 	vm, err := finder.VirtualMachine(ctx, tempaltePath)
 	if err == nil {
-		fmt.Printf("reuse VM %s\n", vm.Name())
 		return vm, nil
 	}
 

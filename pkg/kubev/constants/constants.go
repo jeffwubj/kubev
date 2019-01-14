@@ -38,13 +38,22 @@ ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELE
 `
 
 // TODO: lots of todo's...
+// const KubeAdmInit = `
+// sysctl net.bridge.bridge-nf-call-iptables=1 &&
+// kubeadm reset -f &&
+// kubeadm init --image-repository registry.aliyuncs.com/google_containers --kubernetes-version v1.13.0 &&
+// mkdir -p /root/.kube &&
+// cp /etc/kubernetes/admin.conf /root/.kube/config &&
+// kubectl taint nodes --all node-role.kubernetes.io/master- &&
+// kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+// `
+
 const KubeAdmInit = `
 sysctl net.bridge.bridge-nf-call-iptables=1 &&
 kubeadm reset -f &&
 kubeadm init --image-repository registry.aliyuncs.com/google_containers --kubernetes-version v1.13.0 &&
 mkdir -p /root/.kube &&
 cp /etc/kubernetes/admin.conf /root/.kube/config &&
-kubectl taint nodes --all node-role.kubernetes.io/master- &&
 kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 `
 
@@ -82,6 +91,9 @@ StartLimitInterval=60s
 
 [Install]
 WantedBy=multi-user.target
+`
+const DockerAlias = `#!/bin/sh
+%s -H tcp://%s "$@"
 `
 
 const (
@@ -160,4 +172,15 @@ func GetK8sKitReleaseURL(binaryName, version string) string {
 
 func GetKubernetesReleaseURL(binaryName, version string) string {
 	return fmt.Sprintf("https://kubernetes.oss-cn-hangzhou.aliyuncs.com/kubernetes-release/release/%s/bin/linux/%s/%s", version, runtime.GOARCH, binaryName)
+}
+
+func GetK8sConfigFolder() string {
+	return path.Join(GetHomeFolder(), ".kube")
+}
+func GetK8sConfigPath() string {
+	return path.Join(GetK8sConfigFolder(), "config")
+}
+
+func GetK8sTmpConfigPath() string {
+	return path.Join(GetK8sConfigFolder(), "config.kubev")
 }

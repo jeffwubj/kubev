@@ -1,6 +1,7 @@
 package model
 
 type K8sNodes struct {
+	JoinString  string
 	MasterNode  *K8sNode
 	WorkerNodes []*K8sNode
 }
@@ -13,4 +14,5 @@ type K8sNode struct {
 	DatacenterName string
 	DatastoreName  string
 	MasterNode     bool
+	Ready          bool
 }
