@@ -7,6 +7,11 @@ import (
 )
 
 func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
+
+	if err := generateSSHKey(); err != nil {
+		return nil, err
+	}
+
 	o, err := DeployOVA(answers)
 	if err != nil {
 		return nil, err
@@ -36,6 +41,10 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 	}
 
 	fmt.Printf("%s deployed\n", k8sNodes.MasterNode.VMName)
+	modify_known_hosts(k8sNodes.MasterNode.IP)
+	if err := ConfigVM(k8sNodes.MasterNode); err != nil {
+		return nil, err
+	}
 
 	for _, vm := range k8sNodes.WorkerNodes {
 		_, err := CloneVM(vm, answers)
@@ -43,6 +52,10 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 			return nil, err
 		}
 		fmt.Printf("%s deployed\n", vm.VMName)
+		modify_known_hosts(vm.IP)
+		if err := ConfigVM(vm); err != nil {
+			return nil, err
+		}
 	}
 
 	return k8sNodes, nil
