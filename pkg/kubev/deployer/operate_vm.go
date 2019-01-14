@@ -41,42 +41,44 @@ func changePhotonDefaultPassword(ipAddress string) error {
 
 	// TODO below does not work correctly
 	cmd := fmt.Sprintf("ssh -o PubkeyAuthentication=no %s@%s", constants.PhotonVMUsername, ipAddress)
-	fmt.Println(cmd)
+
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		return err
 	}
-	timeout := 10 * time.Second
-	err = child.ExpectTimeout("Are you sure you want to continue connecting (yes/no)?", timeout)
-	if err != nil {
-		fmt.Println(err.Error())
+	defer child.Close()
+	timeout := 5 * time.Second
+	if err := child.ExpectTimeout("Are you sure you want to continue connecting (yes/no)?", timeout); err != nil {
+		return err
 	}
-	child.SendLine("yes" + "\n")
-	err = child.ExpectTimeout("Password:", timeout)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	child.SendLine(constants.PhotonVMOriginalPassword + "\n")
-	err = child.ExpectTimeout("Current password:", timeout)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	err = child.SendLine(constants.PhotonVMOriginalPassword + "\n")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	child.ExpectTimeout("New password:", timeout)
-	err = child.SendLine(constants.PhotonVMPassword + "\n")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	child.ExpectTimeout("Retype new password:", timeout)
-	err = child.SendLine(constants.PhotonVMPassword + "\n")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	child.SendLine("exit\n")
+	child.SendLine("yes")
 
+	if err := child.ExpectTimeout("assword:", timeout); err != nil {
+		return err
+	}
+	child.SendLine("changeme")
+
+	if err := child.ExpectTimeout("assword:", timeout); err != nil {
+		return err
+	}
+	child.SendLine("changeme")
+
+	if err := child.ExpectTimeout("assword:", timeout); err != nil {
+		return err
+	}
+	child.SendLine("kubernetes")
+
+	if err := child.ExpectTimeout("assword:", timeout); err != nil {
+		return err
+	}
+	child.SendLine("kubernetes")
+
+	if err := child.ExpectTimeout("#", timeout); err != nil {
+		return err
+	}
+	child.SendLine("exit")
+
+	child.Start()
 	return nil
 }
 
