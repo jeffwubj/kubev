@@ -19,10 +19,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/driver"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
+	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/govc/importx"
 	"github.com/vmware/govmomi/object"
@@ -32,6 +34,9 @@ import (
 )
 
 func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
+
+	// TODO if template VM powered on, we need to delete it, otherwise all cloned VM will have same IP
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -227,6 +232,16 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 			Datastore:    &datastoreref,
 		}
 
+		if !answers.IsVCenter {
+			host, err := finder.DefaultHostSystem(ctx)
+			if err != nil {
+				return nil, err
+			}
+			hostref := host.Reference()
+			relocateSpec.Host = &hostref
+			relocateSpec.DiskMoveType = string(types.VirtualMachineRelocateDiskMoveOptionsMoveAllDiskBackingsAndAllowSharing)
+		}
+
 		cloneSpec := &types.VirtualMachineCloneSpec{
 			PowerOn:  false,
 			Template: false,
@@ -239,6 +254,7 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 			return nil, err
 		}
 
+		// TODO failed with 'The operation is not supported on the object.' on esx, license issue?
 		_, err = task.WaitForResult(ctx, nil)
 		if err != nil {
 			return nil, err
@@ -298,6 +314,62 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 	vmConfig.Mo = clonedVM.Reference().String()
 
 	return clonedVM, nil
+}
+
+func Destory(answers *model.Answers, k8snodes *model.K8sNodes) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client, err := driver.NewClient(ctx, answers)
+	if err != nil {
+		return err
+	}
+
+	err = delete(ctx, client, answers, k8snodes.MasterNode)
+	if err != nil {
+		return err
+	}
+
+	for _, node := range k8snodes.WorkerNodes {
+		err = delete(ctx, client, answers, node)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func delete(ctx context.Context, client *govmomi.Client, answers *model.Answers, k8snode *model.K8sNode) error {
+	mos := strings.Split(k8snode.Mo, ":")
+	if len(mos) != 2 {
+		return fmt.Errorf("incorrect configuration for section %s", k8snode.Mo)
+	}
+
+	moref := types.ManagedObjectReference{
+		Type:  mos[0],
+		Value: mos[1],
+	}
+	vm := object.NewVirtualMachine(client.Client, moref)
+
+	task, err := vm.PowerOff(ctx)
+	if err != nil {
+		return err
+	}
+	err = task.Wait(ctx)
+	if err != nil {
+		return err
+	}
+	task, err = vm.Destroy(ctx)
+	if err != nil {
+		return err
+	}
+	err = task.Wait(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s has been destoried\n", k8snode.VMName)
+	return nil
 }
 
 func PrepareResourcePool(answers model.Answers) error {
