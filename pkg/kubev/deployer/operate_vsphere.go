@@ -50,9 +50,21 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 		return vm, nil
 	}
 
-	resourcepool, err := finder.ResourcePool(ctx, answers.Resourcepool)
-	if err != nil {
-		return nil, err
+	var resourcepool *object.ResourcePool
+	if answers.IsVCenter {
+		resourcepool, err = finder.ResourcePool(ctx, answers.Resourcepool)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		host, err := finder.DefaultHostSystem(ctx)
+		if err != nil {
+			return nil, err
+		}
+		resourcepool, err = host.ResourcePool(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	folder, err := finder.Folder(ctx, getVMFolder(answers))
@@ -164,9 +176,21 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 		return nil, err
 	}
 
-	resourcepool, err := finder.ResourcePool(ctx, answers.Resourcepool)
-	if err != nil {
-		return nil, err
+	var resourcepool *object.ResourcePool
+	if answers.IsVCenter {
+		resourcepool, err = finder.ResourcePool(ctx, answers.Resourcepool)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		host, err := finder.DefaultHostSystem(ctx)
+		if err != nil {
+			return nil, err
+		}
+		resourcepool, err = host.ResourcePool(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	clonedVM, err := finder.VirtualMachine(ctx, path.Join(getVMFolder(answers), vmConfig.VMName))
@@ -237,8 +261,15 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 	vmConfigSpec := types.VirtualMachineConfigSpec{}
 	vmConfigSpec.NumCPUs = int32(answers.Cpu)
 	vmConfigSpec.MemoryMB = int64(answers.Memory)
-	clonedVM.Reconfigure(ctx, vmConfigSpec)
-	task, err := clonedVM.PowerOn(ctx)
+	task, err := clonedVM.Reconfigure(ctx, vmConfigSpec)
+	if err != nil {
+		return nil, err
+	}
+	_, err = task.WaitForResult(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	task, err = clonedVM.PowerOn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -257,8 +288,6 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 	vmConfig.FolderPath = clonedVM.InventoryPath
 	vmConfig.IP = ip
 	vmConfig.Mo = clonedVM.Reference().String()
-
-	// spew.Dump(vmConfig)
 
 	return clonedVM, nil
 }

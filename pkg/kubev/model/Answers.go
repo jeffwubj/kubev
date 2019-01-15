@@ -8,7 +8,6 @@ type Answers struct {
 	IsVCenter         bool
 	Datacenter        string
 	Datastore         string
-	Cluster           string
 	Resourcepool      string
 	Folder            string
 	Cpu               int

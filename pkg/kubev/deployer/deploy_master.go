@@ -122,9 +122,9 @@ func PopuldateKubeConfig(c *ssh.Client) error {
 		oldKubeConfig.Clusters[clusterName] = cluster
 	}
 
-	for contextName, context := range newKubeConfig.Contexts {
-		oldKubeConfig.Contexts[contextName] = context
-		oldKubeConfig.CurrentContext = contextName
+	for _, context := range newKubeConfig.Contexts {
+		oldKubeConfig.Contexts["kubev-cluster"] = context
+		oldKubeConfig.CurrentContext = "kubev-cluster"
 	}
 
 	for userName, authInfo := range newKubeConfig.AuthInfos {

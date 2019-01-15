@@ -53,7 +53,7 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	if vms.MasterNode.Ready {
+	if vms.MasterNode != nil && vms.MasterNode.Ready {
 		force := false
 		survey.AskOne(&survey.Confirm{
 			Message: "There is a running cluster, do you want to overwrite it?",
@@ -98,7 +98,6 @@ func readConfig() (*model.Answers, error) {
 		Password:          viper.GetString("password"),
 		Datacenter:        viper.GetString("datacenter"),
 		Datastore:         viper.GetString("datastore"),
-		Cluster:           viper.GetString("cluster"),
 		Resourcepool:      viper.GetString("resourcepool"),
 		Folder:            viper.GetString("folder"),
 		Cpu:               viper.GetInt("cpu"),

@@ -31,7 +31,6 @@ var descriptions = map[string]string{
 	"password":          "vCenter/ESX password",
 	"datacenter":        "Datacenter",
 	"datastore":         "Datastore",
-	"cluster":           "Cluster",
 	"resourcepool":      "Resource pool to hold Kubernetese nodes, input none to not use resource pool",
 	"folder":            "VM Folder name",
 	"cpu":               "Number of vCPUs for each VM, at least 2",
@@ -80,11 +79,6 @@ var vcenterqs = []*survey.Question{
 	{
 		Name:     "datastore",
 		Prompt:   &survey.Input{Message: descriptions["datastore"]},
-		Validate: survey.Required,
-	},
-	{
-		Name:     "cluster",
-		Prompt:   &survey.Input{Message: descriptions["cluster"]},
 		Validate: survey.Required,
 	},
 	{
@@ -166,7 +160,6 @@ func init() {
 	configCmd.Flags().String("password", "", descriptions["password"])
 	configCmd.Flags().String("datacenter", "", descriptions["datacenter"])
 	configCmd.Flags().String("datastore", "", descriptions["datastore"])
-	configCmd.Flags().String("cluster", "", descriptions["cluster"])
 	configCmd.Flags().String("resourcepool", "", descriptions["resourcepool"])
 	configCmd.Flags().String("folder", "", descriptions["folder"])
 	configCmd.Flags().Int("cpu", 2, descriptions["cpu"])
@@ -216,7 +209,6 @@ func interactiveSetConfig() (*model.Answers, error) {
 	viper.Set("password", answers.Password)
 	viper.Set("datacenter", answers.Datacenter)
 	viper.Set("datastore", answers.Datastore)
-	viper.Set("cluster", answers.Cluster)
 	viper.Set("resourcepool", answers.Resourcepool)
 	viper.Set("folder", answers.Folder)
 	viper.Set("cpu", answers.Cpu)
