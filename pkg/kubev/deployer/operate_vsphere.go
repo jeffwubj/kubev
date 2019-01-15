@@ -254,7 +254,8 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 			return nil, err
 		}
 
-		// TODO failed with 'The operation is not supported on the object.' on esx, license issue?
+		// TODO failed with 'The operation is not supported on the object.' if there is orphaned vm with same name
+		// or in esx (https://github.com/vmware/govmomi/pull/486#issuecomment-204326576)
 		_, err = task.WaitForResult(ctx, nil)
 		if err != nil {
 			return nil, err

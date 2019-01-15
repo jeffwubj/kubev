@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
 	"github.com/jeffwubj/kubev/pkg/kubev/utils"
 	"github.com/spf13/cobra"
@@ -88,6 +89,6 @@ func runDestory(cmd *cobra.Command, args []string) {
 		fmt.Println(err.Error())
 		return
 	}
-	// utils.DeleteFile(constants.GetK8sNodesConfigFilePath())
-	// utils.DeleteFile(viper.ConfigFileUsed())
+	utils.DeleteFile(constants.GetK8sNodesConfigFilePath())
+	utils.DeleteFile(viper.ConfigFileUsed())
 }
