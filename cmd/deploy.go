@@ -106,5 +106,6 @@ func readConfig() (*model.Answers, error) {
 		Network:           viper.GetString("network"),
 		KubernetesVersion: viper.GetString("kubernetesversion"),
 		WorkerNodes:       viper.GetInt("workernodes"),
+		IsVCenter:         viper.GetBool("isvcenter"),
 	}, nil
 }

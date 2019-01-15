@@ -5,6 +5,7 @@ type Answers struct {
 	Port              int
 	Username          string
 	Password          string
+	IsVCenter         bool
 	Datacenter        string
 	Datastore         string
 	Cluster           string

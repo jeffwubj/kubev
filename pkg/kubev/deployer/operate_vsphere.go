@@ -273,12 +273,16 @@ func PrepareFolder(answers model.Answers) error {
 	return nil
 }
 
-func ValidatevSphereAccount(answers model.Answers) error {
+func ValidatevSphereAccount(answers *model.Answers) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	return nil
-}
+	client, err := driver.NewClient(ctx, answers)
+	if err != nil {
+		return err
+	}
 
-func ValidatevSphere(answers model.Answers) error {
+	answers.IsVCenter = client.IsVC()
 
 	return nil
 }

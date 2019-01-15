@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -48,7 +49,7 @@ var configCmd = &cobra.Command{
 	Run:   runConfig,
 }
 
-var qs = []*survey.Question{
+var basicqs = []*survey.Question{
 	{
 		Name:     "serverurl",
 		Prompt:   &survey.Input{Message: descriptions["serverurl"]},
@@ -68,6 +69,9 @@ var qs = []*survey.Question{
 		Prompt:   &survey.Input{Message: descriptions["password"]},
 		Validate: survey.Required,
 	},
+}
+
+var vcenterqs = []*survey.Question{
 	{
 		Name:     "datacenter",
 		Prompt:   &survey.Input{Message: descriptions["datacenter"]},
@@ -91,6 +95,39 @@ var qs = []*survey.Question{
 	{
 		Name:     "folder",
 		Prompt:   &survey.Input{Message: descriptions["folder"]},
+		Validate: survey.Required,
+	},
+	{
+		Name:     "cpu",
+		Prompt:   &survey.Input{Message: descriptions["cpu"]},
+		Validate: survey.Required,
+	},
+	{
+		Name:     "memory",
+		Prompt:   &survey.Input{Message: descriptions["memory"]},
+		Validate: survey.Required,
+	},
+	{
+		Name:     "network",
+		Prompt:   &survey.Input{Message: descriptions["network"]},
+		Validate: survey.Required,
+	},
+	{
+		Name:     "kubernetesversion",
+		Prompt:   &survey.Input{Message: descriptions["kubernetesversion"]},
+		Validate: survey.Required,
+	},
+	{
+		Name:     "workernodes",
+		Prompt:   &survey.Input{Message: descriptions["workernodes"]},
+		Validate: survey.Required,
+	},
+}
+
+var esxqs = []*survey.Question{
+	{
+		Name:     "datastore",
+		Prompt:   &survey.Input{Message: descriptions["datastore"]},
 		Validate: survey.Required,
 	},
 	{
@@ -144,13 +181,33 @@ func runConfig(cmd *cobra.Command, args []string) {
 	interactiveSetConfig()
 }
 
-func interactiveSetConfig() model.Answers {
+func interactiveSetConfig() (*model.Answers, error) {
 	// perform the questions
-	answers := model.Answers{}
-	err := survey.Ask(qs, &answers)
+	answers := &model.Answers{}
+	err := survey.Ask(basicqs, answers)
 	if err != nil {
 		fmt.Println(err.Error())
-		return answers
+		return nil, err
+	}
+
+	if err := deployer.ValidatevSphereAccount(answers); err != nil {
+		fmt.Println(err.Error())
+		return nil, err
+	}
+
+	if answers.IsVCenter {
+		err := survey.Ask(vcenterqs, answers)
+		if err != nil {
+			fmt.Println(err.Error())
+			return nil, err
+		}
+	} else {
+		err := survey.Ask(esxqs, answers)
+		if err != nil {
+			fmt.Println(err.Error())
+			return nil, err
+		}
+		answers.Datacenter = "ha-datacenter"
 	}
 
 	viper.Set("serverurl", answers.Serverurl)
@@ -167,7 +224,8 @@ func interactiveSetConfig() model.Answers {
 	viper.Set("network", answers.Network)
 	viper.Set("kubernetesVersion", answers.KubernetesVersion)
 	viper.Set("workernodes", answers.WorkerNodes)
+	viper.Set("isvcenter", answers.IsVCenter)
 
 	viper.WriteConfigAs(viper.ConfigFileUsed())
-	return answers
+	return answers, nil
 }
