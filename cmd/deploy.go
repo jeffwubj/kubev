@@ -26,6 +26,7 @@ import (
 	"github.com/jeffwubj/kubev/pkg/kubev/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/AlecAivazis/survey.v1"
 )
 
 // deployCmd represents the deploy command
@@ -50,6 +51,18 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Println(err.Error())
 		return
+	}
+
+	if vms.MasterNode.Ready {
+		force := false
+		survey.AskOne(&survey.Confirm{
+			Message: "There is a running cluster, do you want to overwrite it?",
+			Default: false,
+		}, &force, nil)
+		if !force {
+			fmt.Println("Bye")
+			return
+		}
 	}
 
 	answers, err := readConfig()

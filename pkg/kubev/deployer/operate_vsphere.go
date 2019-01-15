@@ -77,12 +77,6 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 		return nil, err
 	}
 
-	// e, err := ovf.Unmarshal(bytes.NewReader(o))
-	// if err != nil {
-	// 	return err
-	// }
-	// spew.Dump(e.Network)
-
 	var networks []types.OvfNetworkMapping
 
 	network, err := finder.Network(ctx, answers.Network)
