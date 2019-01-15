@@ -1,3 +1,0 @@
-// Deploy docker
-
-package deployer

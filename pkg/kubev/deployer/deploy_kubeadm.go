@@ -1,3 +1,0 @@
-// Deploy kubeadm
-
-package deployer
