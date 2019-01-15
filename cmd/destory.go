@@ -29,8 +29,9 @@ import (
 var destoryCmd = &cobra.Command{
 	Use:   "destory",
 	Short: "Attention! This command will try to destory VMs in your cluster!",
-	Long:  ``,
-	Run:   runDestory,
+	Long: `This command will read cluster configurations and try to delete master virtual machine and worker
+	virtual machines in your vSphere`,
+	Run: runDestory,
 }
 
 func init() {

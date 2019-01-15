@@ -33,7 +33,7 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
+func DeployOVA(answers *model.Answers, targetpath string) (*object.VirtualMachine, error) {
 
 	// TODO if template VM powered on, we need to delete it, otherwise all cloned VM will have same IP
 
@@ -57,24 +57,20 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 		return nil, err
 	}
 
-	tempaltePath := getTemplateVMPath(answers)
-	vm, err := finder.VirtualMachine(ctx, tempaltePath)
+	vm, err := finder.VirtualMachine(ctx, targetpath)
 	if err == nil {
 		return vm, nil
 	}
 
 	var resourcepool *object.ResourcePool
+
 	if answers.IsVCenter {
 		resourcepool, err = finder.ResourcePool(ctx, answers.Resourcepool)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		host, err := finder.DefaultHostSystem(ctx)
-		if err != nil {
-			return nil, err
-		}
-		resourcepool, err = host.ResourcePool(ctx)
+		resourcepool, err = finder.ResourcePoolOrDefault(ctx, "")
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +83,7 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 
 	fpath := constants.GetLocalK8sKitFilePath(constants.PhotonOVAName, constants.DefaultPhotonVersion)
 
-	fmt.Printf("Deploy %s to %s ...\n", fpath, getTemplateVMPath(answers))
+	fmt.Printf("Deploy %s to %s ...\n", fpath, targetpath)
 
 	archive := &importx.TapeArchive{}
 	archive.SetPath(fpath)
@@ -116,7 +112,7 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 
 	cisp := types.OvfCreateImportSpecParams{
 		DiskProvisioning:   "",
-		EntityName:         constants.DefaultVMTemplateName,
+		EntityName:         path.Base(targetpath),
 		IpAllocationPolicy: "",
 		IpProtocol:         "",
 		OvfManagerCommonParams: types.OvfManagerCommonParams{
@@ -156,7 +152,7 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 
 	lease.Complete(ctx)
 
-	vm, err = finder.VirtualMachine(ctx, getTemplateVMPath(answers))
+	vm, err = finder.VirtualMachine(ctx, targetpath)
 	if err != nil {
 		return nil, err
 	}
@@ -164,12 +160,33 @@ func DeployOVA(answers *model.Answers) (*object.VirtualMachine, error) {
 	vmConfigSpec := types.VirtualMachineConfigSpec{}
 	vmConfigSpec.NumCPUs = int32(answers.Cpu)
 	vmConfigSpec.MemoryMB = int64(answers.Memory)
-	vm.Reconfigure(ctx, vmConfigSpec)
+	task, err := vm.Reconfigure(ctx, vmConfigSpec)
+	if err != nil {
+		return nil, err
+	}
+	err = task.Wait(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	return vm, nil
 }
 
-func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMachine, error) {
+func CreateVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMachine, error) {
+	if !answers.IsVCenter {
+		o, err := DeployOVA(answers, getTemplateVMPath(answers, vmConfig))
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(o.Name() + " deployed")
+	} else if vmConfig.MasterNode {
+		o, err := DeployOVA(answers, getTemplateVMPath(answers, vmConfig))
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(o.Name() + " deployed")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -208,63 +225,71 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 
 	clonedVM, err := finder.VirtualMachine(ctx, path.Join(getVMFolder(answers), vmConfig.VMName))
 	if err != nil {
-		tempaltePath := getTemplateVMPath(answers)
-		vm, err := finder.VirtualMachine(ctx, tempaltePath)
-		if err != nil {
-			return nil, err
-		}
-
-		configSpecs := []types.BaseVirtualDeviceConfigSpec{}
-
-		folder, err := finder.Folder(ctx, getVMFolder(answers))
-		if err != nil {
-			return nil, err
-		}
-
-		folderref := folder.Reference()
-		resourcepoolref := resourcepool.Reference()
-		datastoreref := datastore.Reference()
-
-		relocateSpec := types.VirtualMachineRelocateSpec{
-			DeviceChange: configSpecs,
-			Folder:       &folderref,
-			Pool:         &resourcepoolref,
-			Datastore:    &datastoreref,
-		}
-
-		if !answers.IsVCenter {
-			host, err := finder.DefaultHostSystem(ctx)
+		if answers.IsVCenter { // vCenter
+			tempaltePath := getTemplateVMPath(answers, vmConfig)
+			vm, err := finder.VirtualMachine(ctx, tempaltePath)
 			if err != nil {
 				return nil, err
 			}
-			hostref := host.Reference()
-			relocateSpec.Host = &hostref
-			relocateSpec.DiskMoveType = string(types.VirtualMachineRelocateDiskMoveOptionsMoveAllDiskBackingsAndAllowSharing)
+
+			configSpecs := []types.BaseVirtualDeviceConfigSpec{}
+
+			folder, err := finder.Folder(ctx, getVMFolder(answers))
+			if err != nil {
+				return nil, err
+			}
+
+			folderref := folder.Reference()
+			resourcepoolref := resourcepool.Reference()
+			datastoreref := datastore.Reference()
+
+			relocateSpec := types.VirtualMachineRelocateSpec{
+				DeviceChange: configSpecs,
+				Folder:       &folderref,
+				Pool:         &resourcepoolref,
+				Datastore:    &datastoreref,
+			}
+
+			if !answers.IsVCenter {
+				host, err := finder.DefaultHostSystem(ctx)
+				if err != nil {
+					return nil, err
+				}
+				hostref := host.Reference()
+				relocateSpec.Host = &hostref
+				relocateSpec.DiskMoveType = string(types.VirtualMachineRelocateDiskMoveOptionsMoveAllDiskBackingsAndAllowSharing)
+			}
+
+			cloneSpec := &types.VirtualMachineCloneSpec{
+				PowerOn:  false,
+				Template: false,
+			}
+			cloneSpec.Location = relocateSpec
+
+			// Clone vm to another vm
+			task, err := vm.Clone(ctx, folder, vmConfig.VMName, *cloneSpec)
+			if err != nil {
+				return nil, err
+			}
+
+			// TODO failed with 'The operation is not supported on the object.' if there is orphaned vm with same name
+			// or in esx (https://github.com/vmware/govmomi/pull/486#issuecomment-204326576)
+			_, err = task.WaitForResult(ctx, nil)
+			if err != nil {
+				return nil, err
+			}
+
+			clonedVM, err = finder.VirtualMachine(ctx, path.Join(getVMFolder(answers), vmConfig.VMName))
+			if err != nil {
+				return nil, err
+			}
+		} else { // ESX
+			clonedVM, err = finder.VirtualMachine(ctx, getTemplateVMPath(answers, vmConfig))
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		cloneSpec := &types.VirtualMachineCloneSpec{
-			PowerOn:  false,
-			Template: false,
-		}
-		cloneSpec.Location = relocateSpec
-
-		// Clone vm to another vm
-		task, err := vm.Clone(ctx, folder, vmConfig.VMName, *cloneSpec)
-		if err != nil {
-			return nil, err
-		}
-
-		// TODO failed with 'The operation is not supported on the object.' if there is orphaned vm with same name
-		// or in esx (https://github.com/vmware/govmomi/pull/486#issuecomment-204326576)
-		_, err = task.WaitForResult(ctx, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		clonedVM, err = finder.VirtualMachine(ctx, path.Join(getVMFolder(answers), vmConfig.VMName))
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	powerstate, err := clonedVM.PowerState(ctx)
@@ -272,7 +297,7 @@ func CloneVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMa
 		return nil, err
 	}
 
-	if powerstate == types.VirtualMachinePowerStatePoweredOn {
+	if powerstate != types.VirtualMachinePowerStatePoweredOff {
 		task, err := clonedVM.PowerOff(ctx)
 		if err != nil {
 			return nil, err
@@ -397,8 +422,12 @@ func ValidatevSphereAccount(answers *model.Answers) error {
 	return nil
 }
 
-func getTemplateVMPath(answers *model.Answers) string {
-	return "/" + path.Join(answers.Datacenter, "vm", answers.Folder, constants.DefaultVMTemplateName)
+func getTemplateVMPath(answers *model.Answers, vmConfig *model.K8sNode) string {
+	if answers.IsVCenter {
+		return "/" + path.Join(answers.Datacenter, "vm", answers.Folder, constants.DefaultVMTemplateName)
+	} else {
+		return "/" + path.Join(answers.Datacenter, "vm", answers.Folder, vmConfig.VMName)
+	}
 }
 
 func getVMFolder(answers *model.Answers) string {

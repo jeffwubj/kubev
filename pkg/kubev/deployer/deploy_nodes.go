@@ -26,32 +26,36 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 		return nil, err
 	}
 
-	o, err := DeployOVA(answers)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(o.Name() + " deployed")
-
 	var workderNodes []*model.K8sNode
+
+	worker := "kubev-esx-worker"
+	if answers.IsVCenter {
+		worker = "kubev-vc-worker"
+	}
 
 	for i := 1; i <= answers.WorkerNodes; i++ {
 		workderNodes = append(workderNodes, &model.K8sNode{
 			MasterNode: false,
-			VMName:     fmt.Sprintf("kubev-worker-%d", i),
+			VMName:     fmt.Sprintf("%s-%d", worker, i),
 			Ready:      false,
 		})
+	}
+
+	masterName := "kubev-esx-master"
+	if answers.IsVCenter {
+		masterName = "kubev-vc-master"
 	}
 
 	k8sNodes := &model.K8sNodes{
 		MasterNode: &model.K8sNode{
 			MasterNode: true,
-			VMName:     "kubev-master",
+			VMName:     masterName,
 			Ready:      false,
 		},
 		WorkerNodes: workderNodes,
 	}
 
-	_, err = CloneVM(k8sNodes.MasterNode, answers)
+	_, err := CreateVM(k8sNodes.MasterNode, answers)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +74,7 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 	}
 
 	for _, vm := range k8sNodes.WorkerNodes {
-		_, err := CloneVM(vm, answers)
+		_, err := CreateVM(vm, answers)
 		if err != nil {
 			return nil, err
 		}

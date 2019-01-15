@@ -171,7 +171,16 @@ func init() {
 }
 
 func runConfig(cmd *cobra.Command, args []string) {
-	interactiveSetConfig()
+	answers, _ := interactiveSetConfig()
+	err := deployer.ValidatevSphereAccount(answers)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	if !answers.IsVCenter {
+		fmt.Println("Clone in ESX has not been supported yet, you need to deploy it in vCenter, then you can configure same settings in ESX to run")
+	}
 }
 
 func interactiveSetConfig() (*model.Answers, error) {
