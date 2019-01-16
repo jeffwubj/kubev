@@ -26,8 +26,9 @@ import (
 func NewClient(ctx context.Context, answers *model.Answers) (*govmomi.Client, error) {
 	serverurl := url.URL{
 		Scheme: "https",
-		Path:   fmt.Sprintf("%s:%d/sdk", answers.Serverurl, answers.Port),
+		Path:   "sdk",
 		User:   url.UserPassword(answers.Username, answers.Password),
+		Host:   fmt.Sprintf("%s:%d", answers.Serverurl, answers.Port),
 	}
 	c, err := govmomi.NewClient(ctx, &serverurl, true)
 	if err != nil {
