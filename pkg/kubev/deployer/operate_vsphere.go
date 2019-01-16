@@ -472,6 +472,7 @@ func FindMasterNode(answers *model.Answers) (*model.K8sNode, error) {
 	}
 	if len(objs) == 0 {
 		fmt.Println("Cannot find a master node")
+		return nil, nil
 	} else if len(objs) > 1 {
 		fmt.Println("Found multiple master nodes, will use first one")
 	}
@@ -485,7 +486,9 @@ func FindMasterNode(answers *model.Answers) (*model.K8sNode, error) {
 	}
 
 	if powerstate != types.VirtualMachinePowerStatePoweredOn {
-		return nil, fmt.Errorf("%s is not powered on, cannot recover from it", masterName)
+		return &model.K8sNode{
+			VMName: masterName,
+		}, fmt.Errorf("%s is not powered on, cannot recover from it", masterName)
 	}
 
 	ip, err := vm.WaitForIP(ctx)

@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/spf13/cobra"
@@ -56,7 +57,7 @@ var basicqs = []*survey.Question{
 	},
 	{
 		Name:   "port",
-		Prompt: &survey.Input{Message: descriptions["port"]},
+		Prompt: &survey.Input{Message: descriptions["port"], Default: constants.DefaultRemotePort},
 	},
 	{
 		Name:     "username",
@@ -73,7 +74,7 @@ var basicqs = []*survey.Question{
 var vcenterqs = []*survey.Question{
 	{
 		Name:     "datacenter",
-		Prompt:   &survey.Input{Message: descriptions["datacenter"]},
+		Prompt:   &survey.Input{Message: descriptions["datacenter"], Default: constants.DefaultRemoteDatacenter},
 		Validate: survey.Required,
 	},
 	{
@@ -93,27 +94,27 @@ var vcenterqs = []*survey.Question{
 	},
 	{
 		Name:     "cpu",
-		Prompt:   &survey.Input{Message: descriptions["cpu"]},
+		Prompt:   &survey.Input{Message: descriptions["cpu"], Default: constants.DefaultRemoteCPU},
 		Validate: survey.Required,
 	},
 	{
 		Name:     "memory",
-		Prompt:   &survey.Input{Message: descriptions["memory"]},
+		Prompt:   &survey.Input{Message: descriptions["memory"], Default: constants.DefaultRemoteMemory},
 		Validate: survey.Required,
 	},
 	{
 		Name:     "network",
-		Prompt:   &survey.Input{Message: descriptions["network"]},
+		Prompt:   &survey.Input{Message: descriptions["network"], Default: constants.DefaultRemoteNetwork},
 		Validate: survey.Required,
 	},
 	{
 		Name:     "kubernetesversion",
-		Prompt:   &survey.Input{Message: descriptions["kubernetesversion"]},
+		Prompt:   &survey.Input{Message: descriptions["kubernetesversion"], Default: constants.DefaultKubernetesVersion},
 		Validate: survey.Required,
 	},
 	{
 		Name:     "workernodes",
-		Prompt:   &survey.Input{Message: descriptions["workernodes"]},
+		Prompt:   &survey.Input{Message: descriptions["workernodes"], Default: constants.DefaultKubernetesWorkderNodeNum},
 		Validate: survey.Required,
 	},
 }
@@ -126,27 +127,27 @@ var esxqs = []*survey.Question{
 	},
 	{
 		Name:     "cpu",
-		Prompt:   &survey.Input{Message: descriptions["cpu"]},
+		Prompt:   &survey.Input{Message: descriptions["cpu"], Default: constants.DefaultRemoteCPU},
 		Validate: survey.Required,
 	},
 	{
 		Name:     "memory",
-		Prompt:   &survey.Input{Message: descriptions["memory"]},
+		Prompt:   &survey.Input{Message: descriptions["memory"], Default: constants.DefaultRemoteMemory},
 		Validate: survey.Required,
 	},
 	{
 		Name:     "network",
-		Prompt:   &survey.Input{Message: descriptions["network"]},
+		Prompt:   &survey.Input{Message: descriptions["network"], Default: constants.DefaultRemoteNetwork},
 		Validate: survey.Required,
 	},
 	{
 		Name:     "kubernetesversion",
-		Prompt:   &survey.Input{Message: descriptions["kubernetesversion"]},
+		Prompt:   &survey.Input{Message: descriptions["kubernetesversion"], Default: constants.DefaultKubernetesVersion},
 		Validate: survey.Required,
 	},
 	{
 		Name:     "workernodes",
-		Prompt:   &survey.Input{Message: descriptions["workernodes"]},
+		Prompt:   &survey.Input{Message: descriptions["workernodes"], Default: constants.DefaultKubernetesWorkderNodeNum},
 		Validate: survey.Required,
 	},
 }

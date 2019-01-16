@@ -31,7 +31,6 @@ import (
 )
 
 func ConfigVM(vmconfig *model.K8sNode) error {
-	fmt.Printf("config VM %s:%s\n", vmconfig.VMName, vmconfig.IP)
 	if !needConfigPhoton(vmconfig.IP) {
 		fmt.Printf("no need to change password of %s\n", vmconfig.IP)
 		return nil
@@ -53,7 +52,6 @@ func ConfigVM(vmconfig *model.K8sNode) error {
 }
 
 func CopyLocalFileToRemote(vmconfig *model.K8sNode, localpath, remotepath string) error {
-	fmt.Printf("copy file from %s to %s\n", localpath, remotepath)
 	_, c, err := GetSSHRunner(vmconfig)
 	if err != nil {
 		return err
@@ -66,7 +64,6 @@ func CopyLocalFileToRemote(vmconfig *model.K8sNode, localpath, remotepath string
 
 	srcFile, err := os.Open(localpath)
 	if err != nil {
-		fmt.Println("os.Open error : ", localpath)
 		log.Fatal(err)
 
 	}
@@ -76,7 +73,6 @@ func CopyLocalFileToRemote(vmconfig *model.K8sNode, localpath, remotepath string
 
 	dstFile, err := client.Create(remotepath)
 	if err != nil {
-		fmt.Println("sftpClient.Create error : ", remotepath)
 		log.Fatal(err)
 
 	}
@@ -84,7 +80,6 @@ func CopyLocalFileToRemote(vmconfig *model.K8sNode, localpath, remotepath string
 
 	ff, err := ioutil.ReadAll(srcFile)
 	if err != nil {
-		fmt.Println("ReadAll error : ", localpath)
 		log.Fatal(err)
 
 	}

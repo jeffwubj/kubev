@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jeffwubj/kubev/pkg/kubev/cacher"
 	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
@@ -56,7 +55,7 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	if vms.MasterNode != nil && vms.MasterNode.Ready {
 		force := false
 		survey.AskOne(&survey.Confirm{
-			Message: "There is a running cluster, do you want to overwrite it?",
+			Message: "There is a running cluster config locally, do you want to overwrite local config?",
 			Default: false,
 		}, &force, nil)
 		if !force {
@@ -70,6 +69,26 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		fmt.Println(err.Error())
 		return
 	}
+
+	vmconfig, err := deployer.FindMasterNode(answers)
+
+	if vmconfig != nil {
+		overwrite := false
+		survey.AskOne(&survey.Confirm{
+			Message: fmt.Sprintf(`Found Kubernetes master node %s, do you want to overwrite this cluster? (You should use kubev scale to change existing cluster)`, vmconfig.VMName),
+			Default: false,
+		}, &overwrite, nil)
+		if !overwrite {
+			fmt.Println("Bye")
+			return
+		}
+	}
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
 	cacher.CacheAll(viper.GetString("kubernetesversion"))
 
 	vms, err = deployer.DeployNodes(answers)
@@ -79,7 +98,6 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	spew.Dump(vms)
 	utils.SaveK8sNodes(vms)
 }
 

@@ -46,14 +46,14 @@ func PrepareVM(vmconfig *model.K8sNode) error {
 		files = append(files, binfile)
 	}
 
-	fmt.Println("Prepare k8s binary files...")
+	// fmt.Println("Prepare k8s binary files...")
 	binfile, err := assets.NewFileAsset(constants.GetLocalK8sKitFilePath(constants.GuestKubeCtlBinaryName, k8sversion), "/usr/bin", constants.KubeCtlBinaryName, "0750")
 	if err != nil {
 		return err
 	}
 	files = append(files, binfile)
 
-	fmt.Println("Prepare CNI binary files...")
+	// fmt.Println("Prepare CNI binary files...")
 	// List all bins one bye one to make sure they are there
 	for _, bin := range []string{"bridge", "dhcp", "flannel", "host-device", "host-local", "ipvlan", "loopback", "macvlan", "portmap", "ptp", "sample", "tuning", "vlan"} {
 		binPath := path.Join(constants.GetLocalK8sKitPath(constants.CNIKits, k8sversion), bin)
