@@ -32,7 +32,6 @@ import (
 
 func ConfigVM(vmconfig *model.K8sNode) error {
 	if !needConfigPhoton(vmconfig.IP) {
-		fmt.Printf("no need to change password of %s\n", vmconfig.IP)
 		return nil
 	}
 

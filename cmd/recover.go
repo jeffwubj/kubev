@@ -92,11 +92,16 @@ func runRecover(cmd *cobra.Command, args []string) {
 
 	fmt.Println("Configuration files recovered")
 
+	username := answers.Username
+	password := answers.Password
 	answers, err = readConfig()
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
+	answers.Username = username
+	answers.Password = password
+	SaveAnswers(answers)
 
 	fmt.Printf("Cache %s kits...\n", answers.KubernetesVersion)
 	cacher.CacheAll(answers.KubernetesVersion)

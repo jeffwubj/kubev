@@ -20,6 +20,7 @@ import (
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/jeffwubj/kubev/pkg/kubev/utils"
+	"github.com/spf13/viper"
 )
 
 func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
@@ -107,7 +108,11 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 		return k8sNodes, err
 	}
 
-	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetKubeVConfigFilePath(), constants.GetRemoteKubeVConfigFilePath()); err != nil {
+	tmpfile := constants.GetTmpKubeVConfigFilePath()
+	setTmpViperToExcludeCredential(answers)
+	viper.WriteConfigAs(tmpfile)
+	defer utils.DeleteFile(tmpfile)
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, tmpfile, constants.GetRemoteKubeVConfigFilePath()); err != nil {
 		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
 		return k8sNodes, err
 	}
@@ -122,5 +127,24 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 		return k8sNodes, err
 	}
 
+	fmt.Println("All finished, enjoy with kubectl :-)")
+
 	return k8sNodes, nil
+}
+
+func setTmpViperToExcludeCredential(answers *model.Answers) {
+	viper.Set("serverurl", answers.Serverurl)
+	viper.Set("port", answers.Port)
+	viper.Set("username", "github.com/jeffwubj/kubev")
+	viper.Set("password", "github.com/jeffwubj/kubev")
+	viper.Set("datacenter", answers.Datacenter)
+	viper.Set("datastore", answers.Datastore)
+	viper.Set("resourcepool", answers.Resourcepool)
+	viper.Set("folder", answers.Folder)
+	viper.Set("cpu", answers.Cpu)
+	viper.Set("memory", answers.Memory)
+	viper.Set("network", answers.Network)
+	viper.Set("kubernetesVersion", answers.KubernetesVersion)
+	viper.Set("workernodes", answers.WorkerNodes)
+	viper.Set("isvcenter", answers.IsVCenter)
 }

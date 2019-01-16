@@ -160,6 +160,10 @@ func GetKubeVConfigFilePath() string {
 	return path.Join(GetKubeVHomeFolder(), KuebVConfigFileName)
 }
 
+func GetTmpKubeVConfigFilePath() string {
+	return path.Join(GetKubeVHomeFolder(), "kubev_tmp.yaml")
+}
+
 func GetRemoteKubeVConfigFilePath() string {
 	return "/root/.kubev/" + KuebVConfigFileName
 }

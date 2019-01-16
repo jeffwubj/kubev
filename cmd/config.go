@@ -209,6 +209,12 @@ func interactiveSetConfig() (*model.Answers, error) {
 		answers.Datacenter = "ha-datacenter"
 	}
 
+	SaveAnswers(answers)
+
+	return answers, nil
+}
+
+func SaveAnswers(answers *model.Answers) {
 	viper.Set("serverurl", answers.Serverurl)
 	viper.Set("port", answers.Port)
 	viper.Set("username", answers.Username)
@@ -223,7 +229,5 @@ func interactiveSetConfig() (*model.Answers, error) {
 	viper.Set("kubernetesVersion", answers.KubernetesVersion)
 	viper.Set("workernodes", answers.WorkerNodes)
 	viper.Set("isvcenter", answers.IsVCenter)
-
 	viper.WriteConfigAs(viper.ConfigFileUsed())
-	return answers, nil
 }

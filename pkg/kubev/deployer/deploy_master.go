@@ -32,8 +32,6 @@ import (
 )
 
 func UpdateMasterNode(k8snodes *model.K8sNodes) error {
-	fmt.Println("Prepare k8s master node...")
-
 	vmconfig := k8snodes.MasterNode
 
 	if err := PrepareVM(vmconfig); err != nil {
