@@ -98,7 +98,11 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	token := utils.EncodeToken(vms.MasterNode)
+	fmt.Printf("\n\nUse 'kubev use --token %s' in other machine to use this cluster\n\n", token)
+
 	utils.SaveK8sNodes(vms)
+	fmt.Println("All finished, enjoy with kubectl :-)")
 }
 
 func readConfig() (*model.Answers, error) {

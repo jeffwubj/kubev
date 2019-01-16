@@ -127,8 +127,6 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 		return k8sNodes, err
 	}
 
-	fmt.Println("All finished, enjoy with kubectl :-)")
-
 	return k8sNodes, nil
 }
 

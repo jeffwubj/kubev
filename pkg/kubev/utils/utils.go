@@ -15,11 +15,15 @@
 package utils
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"vmware/f8s/pkg/utils"
 
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
@@ -155,4 +159,38 @@ func saveConfigToFile(data []byte, file string) error {
 		return err
 	}
 	return nil
+}
+
+func EncodeToken(vmconfig *model.K8sNode) string {
+	token := vmconfig.IP
+	data := []byte(token)
+	return base64.StdEncoding.EncodeToString(data)
+}
+
+func DecodeToken(token string) (string, error) {
+	decodeBytes, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return "", fmt.Errorf("Invalide token")
+	}
+	return string(decodeBytes), nil
+}
+
+func Is_ipv4(host string) bool {
+	parts := strings.Split(host, ".")
+
+	if len(parts) < 4 {
+		return false
+	}
+
+	for _, x := range parts {
+		if i, err := strconv.Atoi(x); err == nil {
+			if i < 0 || i > 255 {
+				return false
+			}
+		} else {
+			return false
+		}
+
+	}
+	return true
 }

@@ -35,19 +35,18 @@ func CacheAll(kubernetesVersion string) error {
 		constants.CNIKits,
 		constants.DockerBinaryName,
 	} {
-		if _, err := cache(false, binName, kubernetesVersion); err != nil {
+		if _, err := Cache(false, binName, kubernetesVersion); err != nil {
 			return err
 		}
 	}
 
-	if _, err := cache(false, constants.PhotonOVAName, constants.DefaultPhotonVersion); err != nil {
+	if _, err := Cache(false, constants.PhotonOVAName, constants.DefaultPhotonVersion); err != nil {
 		return err
 	}
 	return nil
 }
 
-func cache(force bool, kitName, kitVersion string) (string, error) {
-
+func Cache(force bool, kitName, kitVersion string) (string, error) {
 	targetDir := constants.GetLocalK8sKitPath(kitName, kitVersion)
 	targetFilepath := path.Join(targetDir, kitName)
 

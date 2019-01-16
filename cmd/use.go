@@ -16,14 +16,22 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/cacher"
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
+	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
+	"github.com/jeffwubj/kubev/pkg/kubev/model"
+	"github.com/jeffwubj/kubev/pkg/kubev/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // useCmd represents the use command
 var useCmd = &cobra.Command{
 	Use:   "use",
-	Short: "Use a ticket to play to a Kuberntes cluster",
+	Short: "Use a ticket in this command to play to shared Kuberntes cluster",
 	Long: `Ticket will be printed in command kubev deploy and shared to other host 
 that will use this cluster`,
 	Run: runUse,
@@ -31,18 +39,60 @@ that will use this cluster`,
 
 func init() {
 	rootCmd.AddCommand(useCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// useCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// useCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	useCmd.Flags().String("token", "", "token printed in the 'kubev deploy' command")
+	useCmd.MarkFlagRequired("token")
+	viper.BindPFlags(useCmd.Flags())
 }
 
 func runUse(cmd *cobra.Command, args []string) {
-	fmt.Println("use called")
+	token := viper.GetString("token")
+	ip, err := utils.DecodeToken(token)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	if !utils.Is_ipv4(ip) {
+		fmt.Println("Incorrect token")
+		return
+	}
+
+	fmt.Println(ip)
+
+	vmconfig := &model.K8sNode{
+		IP: ip,
+	}
+
+	if err := deployer.DownloadKubeCtlConfig(vmconfig); err != nil {
+		fmt.Println("Failed to download meta data")
+		return
+	}
+	fmt.Println("kubectl config file deployed")
+
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteKubeVConfigFilePath(), constants.GetKubeVConfigFilePath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return
+	}
+	answers, err := readConfig()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	k8sversion := answers.KubernetesVersion
+	fmt.Printf("Kubernetes version is %s\n", k8sversion)
+	_, err = cacher.Cache(false, constants.KubeCtlBinaryName, k8sversion)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	symlink := filepath.Join("/usr/local/bin/", constants.KubeCtlBinaryName)
+	os.Remove(symlink)
+	kubectlLocalPath := constants.GetLocalK8sKitFilePath(constants.KubeCtlBinaryName, k8sversion)
+	if err := os.Symlink(kubectlLocalPath, symlink); err != nil {
+		fmt.Println(err.Error())
+		fmt.Printf("Failed to link kubectl, please put %s into your path.\n", kubectlLocalPath)
+		return
+	}
+	fmt.Println("kubectl is ready, enjoy your Kubernetes cluster")
 }
