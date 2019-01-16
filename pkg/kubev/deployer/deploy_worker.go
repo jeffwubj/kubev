@@ -163,3 +163,21 @@ func GetSSHRunner(vmconfig *model.K8sNode) (*SSHRunner, *ssh.Client, error) {
 	runner := NewSSHRunner(c)
 	return runner, c, nil
 }
+
+func GetSSHRunner2(vmconfig *model.K8sNode) (*SSHRunner, *ssh.Client, error) {
+	config := &cryptossh.ClientConfig{
+		User: constants.PhotonVMUsername,
+		Auth: []cryptossh.AuthMethod{
+			cryptossh.Password(constants.PhotonVMPassword),
+		},
+		HostKeyCallback: cryptossh.InsecureIgnoreHostKey(),
+	}
+
+	c, err := cryptossh.Dial("tcp", fmt.Sprintf("%s:%d", vmconfig.IP, 22), config)
+	if err != nil {
+		fmt.Println("Failed to diag VM")
+		return nil, nil, err
+	}
+	runner := NewSSHRunner(c)
+	return runner, c, nil
+}

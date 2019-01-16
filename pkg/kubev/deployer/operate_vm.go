@@ -16,13 +16,17 @@ package deployer
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ThomasRooney/gexpect"
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
+	"github.com/pkg/sftp"
 	cryptossh "golang.org/x/crypto/ssh"
 )
 
@@ -42,6 +46,95 @@ func ConfigVM(vmconfig *model.K8sNode) error {
 
 	if err := configSSHInVM(vmconfig); err != nil {
 		fmt.Println("config ssh failed\n")
+		return err
+	}
+
+	return nil
+}
+
+func CopyLocalFileToRemote(vmconfig *model.K8sNode, localpath, remotepath string) error {
+	fmt.Printf("copy file from %s to %s\n", localpath, remotepath)
+	_, c, err := GetSSHRunner(vmconfig)
+	if err != nil {
+		return err
+	}
+	client, err := sftp.NewClient(c)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	srcFile, err := os.Open(localpath)
+	if err != nil {
+		fmt.Println("os.Open error : ", localpath)
+		log.Fatal(err)
+
+	}
+	defer srcFile.Close()
+
+	client.Mkdir(filepath.Dir(remotepath))
+
+	dstFile, err := client.Create(remotepath)
+	if err != nil {
+		fmt.Println("sftpClient.Create error : ", remotepath)
+		log.Fatal(err)
+
+	}
+	defer dstFile.Close()
+
+	ff, err := ioutil.ReadAll(srcFile)
+	if err != nil {
+		fmt.Println("ReadAll error : ", localpath)
+		log.Fatal(err)
+
+	}
+	dstFile.Write(ff)
+	return nil
+}
+
+func DownloadKubeCtlConfig(vmconfig *model.K8sNode) error {
+	_, c, err := GetSSHRunner2(vmconfig)
+	if err != nil {
+		return err
+	}
+
+	if err := PopuldateKubeConfig(c); err != nil {
+		fmt.Println("Failed to write Kuberntes config file")
+		return err
+	}
+	return nil
+}
+
+func CopyRemoteFileToLocal(vmconfig *model.K8sNode, remotepath, localpath string) error {
+	_, c, err := GetSSHRunner2(vmconfig)
+	if err != nil {
+		return err
+	}
+	client, err := sftp.NewClient(c)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	srcFile, err := client.Open(remotepath)
+	if err != nil {
+		return err
+	}
+
+	os.Mkdir(filepath.Dir(localpath), os.ModePerm)
+	dstFile, err := os.OpenFile(localpath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	if err != nil {
+		return err
+	}
+
+	err = dstFile.Sync()
+	if err != nil {
 		return err
 	}
 

@@ -128,6 +128,8 @@ const (
 	KubeletSystemdConfFile   = "/etc/systemd/system/kubelet.service.d/10-kubeadm.conf"
 	DockerServiceFile        = "/usr/lib/systemd/system/docker.service"
 	DefaultVMTemplateName    = "kubev-template"
+	K8sNodesConfigFileName   = "kubev-k8s.json"
+	KuebVConfigFileName      = "kubev.yaml"
 )
 
 func GetHomeFolder() string {
@@ -140,7 +142,19 @@ func GetKubeVHomeFolder() string {
 }
 
 func GetK8sNodesConfigFilePath() string {
-	return path.Join(GetKubeVHomeFolder(), "config.json")
+	return path.Join(GetKubeVHomeFolder(), K8sNodesConfigFileName)
+}
+
+func GetRemoteK8sNodesConfigFilePath() string {
+	return "/root/.kubev/" + K8sNodesConfigFileName
+}
+
+func GetKubeVConfigFilePath() string {
+	return path.Join(GetKubeVHomeFolder(), KuebVConfigFileName)
+}
+
+func GetRemoteKubeVConfigFilePath() string {
+	return "/root/.kubev/" + KuebVConfigFileName
 }
 
 func GetLocalK8sKitPath(binaryName, version string) string {
@@ -151,8 +165,16 @@ func GetVMPrivateKeyPath() string {
 	return path.Join(GetKubeVHomeFolder(), "id_rsa")
 }
 
+func GetRemoteVMPrivateKeyPath() string {
+	return "/root/.kubev/" + "id_rsa"
+}
+
 func GetVMPublicKeyPath() string {
 	return GetVMPrivateKeyPath() + ".pub"
+}
+
+func GetRemoteVMPublicKeyPath() string {
+	return GetRemoteVMPrivateKeyPath() + ".pub"
 }
 
 func GetLocalK8sKitFilePath(binaryName, version string) string {

@@ -17,6 +17,7 @@ package deployer
 import (
 	"fmt"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/jeffwubj/kubev/pkg/kubev/utils"
 )
@@ -73,6 +74,7 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 		}
 	}
 
+	// TODO Do it in parallel
 	for _, vm := range k8sNodes.WorkerNodes {
 		_, err := CreateVM(vm, answers)
 		if err != nil {
@@ -96,6 +98,29 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 	}
 
 	utils.SaveK8sNodes(k8sNodes)
+
+	// RISK, WA for now
+	// TODO remove password before upload and re-add password after recovery, password will can be read from user input
+
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetK8sNodesConfigFilePath(), constants.GetRemoteK8sNodesConfigFilePath()); err != nil {
+		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+		return k8sNodes, err
+	}
+
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetKubeVConfigFilePath(), constants.GetRemoteKubeVConfigFilePath()); err != nil {
+		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+		return k8sNodes, err
+	}
+
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetVMPrivateKeyPath(), constants.GetRemoteVMPrivateKeyPath()); err != nil {
+		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+		return k8sNodes, err
+	}
+
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetVMPublicKeyPath(), constants.GetRemoteVMPublicKeyPath()); err != nil {
+		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+		return k8sNodes, err
+	}
 
 	return k8sNodes, nil
 }

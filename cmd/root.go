@@ -71,7 +71,7 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		viper.SetConfigFile(path.Join(constants.GetKubeVHomeFolder(), "kubev.yaml"))
+		viper.SetConfigFile(constants.GetKubeVConfigFilePath())
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

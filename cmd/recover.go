@@ -17,30 +17,90 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/cacher"
+	"github.com/jeffwubj/kubev/pkg/kubev/constants"
+	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
+	"github.com/jeffwubj/kubev/pkg/kubev/model"
 	"github.com/spf13/cobra"
+	survey "gopkg.in/AlecAivazis/survey.v1"
 )
 
 // recoverCmd represents the recover command
 var recoverCmd = &cobra.Command{
 	Use:   "recover",
-	Short: "Find Kubernetes cluster deployed by kubev in your vSphere",
-	Long: `This command will try to find cluster deployed in given vSphere and 
-	reconfigure kubectl in local host to manage that cluster`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("TODO")
-	},
+	Short: "Find Kubernetes cluster deployed by kubev in your vSphere/ESX",
+	Long:  `Cannot revover from a master node with password changed`,
+	Run:   runRecover,
 }
 
 func init() {
 	rootCmd.AddCommand(recoverCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func runRecover(cmd *cobra.Command, args []string) {
+	answers := &model.Answers{}
+	err := survey.Ask(basicqs, answers)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	if err := deployer.ValidatevSphereAccount(answers); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// recoverCmd.PersistentFlags().String("foo", "", "A help for foo")
+	if answers.IsVCenter {
+		survey.AskOne(&survey.Input{
+			Message: descriptions["datacenter"],
+		}, &answers.Datacenter, nil)
+	} else {
+		answers.Datacenter = "ha-datacenter"
+	}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// recoverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	vmconfig, err := deployer.FindMasterNode(answers)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	fmt.Printf("Found master node at %s\n", vmconfig.IP)
+
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteK8sNodesConfigFilePath(), constants.GetK8sNodesConfigFilePath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return
+	}
+
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteKubeVConfigFilePath(), constants.GetKubeVConfigFilePath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return
+	}
+
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteVMPrivateKeyPath(), constants.GetVMPrivateKeyPath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return
+	}
+
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteVMPublicKeyPath(), constants.GetVMPublicKeyPath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return
+	}
+
+	if err := deployer.DownloadKubeCtlConfig(vmconfig); err != nil {
+		fmt.Println("Failed to download meta data")
+		return
+	}
+
+	fmt.Println("Configuration files recovered")
+
+	answers, err = readConfig()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	fmt.Printf("Cache %s kits...\n", answers.KubernetesVersion)
+	cacher.CacheAll(answers.KubernetesVersion)
+
+	fmt.Println("All recovered")
+
 }

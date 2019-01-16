@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
@@ -29,6 +30,8 @@ import (
 	"github.com/vmware/govmomi/govc/importx"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/ovf"
+	"github.com/vmware/govmomi/property"
+	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 )
@@ -83,7 +86,7 @@ func DeployOVA(answers *model.Answers, targetpath string) (*object.VirtualMachin
 
 	fpath := constants.GetLocalK8sKitFilePath(constants.PhotonOVAName, constants.DefaultPhotonVersion)
 
-	fmt.Printf("Deploy %s to %s ...\n", fpath, targetpath)
+	fmt.Printf("Deploy %s to %s ...\n", filepath.Base(fpath), targetpath)
 
 	archive := &importx.TapeArchive{}
 	archive.SetPath(fpath)
@@ -432,4 +435,66 @@ func getTemplateVMPath(answers *model.Answers, vmConfig *model.K8sNode) string {
 
 func getVMFolder(answers *model.Answers) string {
 	return "/" + path.Join(answers.Datacenter, "vm", answers.Folder)
+}
+
+func FindMasterNode(answers *model.Answers) (*model.K8sNode, error) {
+	masterName := "kubev-esx-master"
+	if answers.IsVCenter {
+		masterName = "kubev-vc-master"
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client, err := driver.NewClient(ctx, answers)
+	if err != nil {
+		return nil, err
+	}
+
+	finder := find.NewFinder(client.Client, true)
+
+	datacenter, err := finder.Datacenter(ctx, answers.Datacenter)
+	if err != nil {
+		return nil, err
+	}
+
+	m := view.NewManager(client.Client)
+	v, err := m.CreateContainerView(ctx, datacenter.Reference(), []string{"VirtualMachine"}, true)
+	if err != nil {
+		return nil, nil
+	}
+	defer v.Destroy(ctx)
+	filter := property.Filter{}
+	filter["name"] = masterName
+	objs, err := v.Find(ctx, nil, filter)
+	if err != nil {
+		return nil, nil
+	}
+	if len(objs) == 0 {
+		fmt.Println("Cannot find a master node")
+	} else if len(objs) > 1 {
+		fmt.Println("Found multiple master nodes, will use first one")
+	}
+	masterVM := objs[0]
+
+	vm := object.NewVirtualMachine(client.Client, masterVM)
+
+	powerstate, err := vm.PowerState(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if powerstate != types.VirtualMachinePowerStatePoweredOn {
+		return nil, fmt.Errorf("%s is not powered on, cannot recover from it", masterName)
+	}
+
+	ip, err := vm.WaitForIP(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.K8sNode{
+		VMName: masterName,
+		IP:     ip,
+	}, nil
 }
