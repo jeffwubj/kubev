@@ -75,7 +75,7 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	if vmconfig != nil {
 		overwrite := false
 		survey.AskOne(&survey.Confirm{
-			Message: fmt.Sprintf(`Found Kubernetes master node %s, do you want to overwrite this cluster? (You should use kubev scale to change existing cluster)`, vmconfig.VMName),
+			Message: fmt.Sprintf(`Found Kubernetes master node %s, do you want to overwrite this cluster? (You should use kubev scale to change existing cluster or kubev recover to re-manage it)`, vmconfig.VMName),
 			Default: false,
 		}, &overwrite, nil)
 		if !overwrite {

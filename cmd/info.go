@@ -48,9 +48,6 @@ func runInfo(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Println("Kubernetes version is", answers.KubernetesVersion)
-	fmt.Println("Host is", answers.Serverurl)
-
 	vms, err := utils.ReadK8sNodes()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -60,6 +57,11 @@ func runInfo(cmd *cobra.Command, args []string) {
 		fmt.Println("There is no config file, deploy a cluster or run 'kubev recover' to find an existing cluster")
 		return
 	}
+
+	fmt.Println("Kubernetes version is", answers.KubernetesVersion)
+	fmt.Println("Host is", answers.Serverurl)
+	token := utils.EncodeToken(vms.MasterNode)
+	fmt.Printf("Use 'kubev use --token %s' in other machine to use this cluster\n", token)
 
 	data := [][]string{}
 	data = append(data, []string{vms.MasterNode.VMName, "master", vms.MasterNode.IP})

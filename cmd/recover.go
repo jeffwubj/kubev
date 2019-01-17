@@ -63,6 +63,11 @@ func runRecover(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	if vmconfig == nil {
+		fmt.Println("Cannot find a master node")
+		return
+	}
+
 	fmt.Printf("Found master node at %s\n", vmconfig.IP)
 
 	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteK8sNodesConfigFilePath(), constants.GetK8sNodesConfigFilePath()); err != nil {

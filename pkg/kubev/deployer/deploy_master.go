@@ -17,7 +17,6 @@ package deployer
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -71,19 +70,17 @@ func UpdateMasterNode(k8snodes *model.K8sNodes) error {
 		fmt.Printf("Failed to link kubectl, please put %s into your path.\n", kubectlLocalPath)
 	}
 
-	symlink = filepath.Join("/usr/local/bin/", constants.DockerBinaryName)
-	os.Remove(symlink)
-	dockerLocalPath := constants.GetLocalK8sKitFilePath(constants.DockerBinaryName, k8sversion)
-
-	dockerAliasContent := fmt.Sprintf(constants.DockerAlias, dockerLocalPath, vmconfig.IP+":2375")
-
-	content := []byte(dockerAliasContent)
-	ioutil.WriteFile(symlink, content, os.ModePerm)
-	err = ioutil.WriteFile(symlink, content, 0644)
-	if err != nil {
-		fmt.Println(err.Error())
-		fmt.Printf("Failed to link docker, please put %s into your path.\n", dockerLocalPath)
-	}
+	// symlink = filepath.Join("/usr/local/bin/", constants.DockerBinaryName)
+	// os.Remove(symlink)
+	// dockerLocalPath := constants.GetLocalK8sKitFilePath(constants.DockerBinaryName, k8sversion)
+	// dockerAliasContent := fmt.Sprintf(constants.DockerAlias, dockerLocalPath, vmconfig.IP+":2375")
+	// content := []byte(dockerAliasContent)
+	// ioutil.WriteFile(symlink, content, os.ModePerm)
+	// err = ioutil.WriteFile(symlink, content, 0644)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// 	fmt.Printf("Failed to link docker, please put %s into your path.\n", dockerLocalPath)
+	// }
 
 	fmt.Println("deploy master is done")
 

@@ -35,7 +35,7 @@ func PrepareVM(vmconfig *model.K8sNode) error {
 	files := []assets.CopyableFile{
 		assets.NewMemoryAssetTarget([]byte(constants.KubeletService), constants.KubeletServiceFile, "0640"),
 		assets.NewMemoryAssetTarget([]byte(constants.KubeletSystemd), constants.KubeletSystemdConfFile, "0640"),
-		assets.NewMemoryAssetTarget([]byte(constants.DockerService), constants.DockerServiceFile, "0640"),
+		// assets.NewMemoryAssetTarget([]byte(constants.DockerService), constants.DockerServiceFile, "0640"),
 	}
 
 	for _, bin := range []string{constants.KubeAdmBinaryName, constants.KubeletBinaryName, constants.CriCtlBinaryName} {
