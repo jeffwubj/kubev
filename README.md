@@ -67,10 +67,12 @@ Ideally, just one single kubev binary is enough to deploy an experimental Kubern
  
  ### Config
  `kubev config`
+
  This should be the first command to start, you will need to input vCenter/ESX information together Kubernetes information. You will need to prepare Datacenter, cluster before running it.
  
  ### Deploy
  `kubev deploy`
+ 
  After run `kubev config`, we should run this command to deploy a Kubernetes cluster in vCenter or ESX.
  Underneath, it will download kubectl, kubelet, kubeadm, vitual machine templates and deploy them to vCenter or ESX.
  
@@ -78,17 +80,22 @@ Ideally, just one single kubev binary is enough to deploy an experimental Kubern
  
  ### Use
  `kubev use --token xxx`
+ 
  In another host, we can run this command to prepare host to manage Kubernetes cluster provisioned previously.
  
  ### Recover
  `kubev recover`
+ 
  This command will searching vCenter or ESX for cluster deployed by kubev and make host being able to manage this cluster.
  
  ### Scale
+ `kubev scale`
+ 
  This command can add more nodes or remove existing nodes from managed cluster.
  
  ### Destory
  `kubev destory`
+ 
  This will destory all nodes deployed by kubev, **be carful on this**
  
  ### Notes
