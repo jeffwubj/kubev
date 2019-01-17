@@ -20,6 +20,7 @@ import (
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
+	"github.com/jeffwubj/kubev/pkg/kubev/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/AlecAivazis/survey.v1"
@@ -172,8 +173,7 @@ func init() {
 }
 
 func runConfig(cmd *cobra.Command, args []string) {
-	answers, _ := interactiveSetConfig()
-	err := deployer.ValidatevSphereAccount(answers)
+	_, err := interactiveSetConfig()
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -207,6 +207,19 @@ func interactiveSetConfig() (*model.Answers, error) {
 			return nil, err
 		}
 		answers.Datacenter = "ha-datacenter"
+	}
+
+	if utils.FileExists(constants.GetK8sNodesConfigFilePath()) {
+		save := false
+		survey.AskOne(&survey.Confirm{
+			Message: "If there is local cluster information, it will be deleted, continue?",
+			Default: true,
+		}, &save, nil)
+		if !save {
+			fmt.Println("Bye")
+			return nil, fmt.Errorf("Canceled")
+		}
+		utils.DeleteFile(constants.GetK8sNodesConfigFilePath())
 	}
 
 	SaveAnswers(answers)
