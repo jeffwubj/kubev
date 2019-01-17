@@ -88,6 +88,8 @@ Ideally, just one single kubev binary is enough to deploy an experimental Kubern
  
  This command will searching vCenter or ESX for cluster deployed by kubev and make host being able to manage this cluster.
  
+ If we want to use `kubev` to deploy cluster in different host, be sure to use `kubev recover` to sync changes.
+ 
  ### Scale
  `kubev scale`
  
