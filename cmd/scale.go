@@ -17,34 +17,105 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
+	"github.com/jeffwubj/kubev/pkg/kubev/model"
+	"github.com/jeffwubj/kubev/pkg/kubev/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	survey "gopkg.in/AlecAivazis/survey.v1"
 )
 
 // scaleCmd represents the scale command
 var scaleCmd = &cobra.Command{
 	Use:   "scale",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("TODO")
-	},
+	Short: "Add more workder nodes or remove existing workder nodes",
+	Long:  ``,
+	Run:   runScale,
 }
 
 func init() {
 	rootCmd.AddCommand(scaleCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func runScale(cmd *cobra.Command, args []string) {
+	if !utils.FileExists(viper.ConfigFileUsed()) {
+		fmt.Println("There is no config file, run config and deploy before scale")
+		return
+	}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// scaleCmd.PersistentFlags().String("foo", "", "A help for foo")
+	answers, err := readConfig()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// scaleCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	vms, err := utils.ReadK8sNodes()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	workernodes := vms.WorkerNodes
+askagain:
+	number := len(workernodes)
+	survey.AskOne(&survey.Input{
+		Message: fmt.Sprintf("There are %d worker nodes in current cluster, how many workder nodes do you want?", number),
+	}, &number, nil)
+
+	if number <= 0 || number > 1000 {
+		fmt.Println("Please input a validate worker nodes number")
+		goto askagain
+	}
+
+	if answers.WorkerNodes == number {
+		fmt.Printf("Cluster already has %d worker nodes, no extra action needed", number)
+	} else if answers.WorkerNodes > number { // DELETE
+		fmt.Printf("Changing cluster with %d nodes...\n", number)
+		todelete := answers.WorkerNodes - number
+		for i := 0; i < todelete; i++ {
+			x := workernodes[len(workernodes)-1]
+			workernodes = workernodes[:len(workernodes)-1]
+			if err := deployer.DestorySingle(answers, x); err != nil {
+				fmt.Printf("Failed to delete %s: %s\n", x.VMName, err.Error())
+				break
+			}
+			if err := deployer.DeleteWorkerNodeFromKubenretes(x, vms); err != nil {
+				fmt.Printf("Failed to remove %s: %s\n", x.VMName, err.Error())
+				break
+			}
+			answers.WorkerNodes = answers.WorkerNodes - 1
+		}
+	} else { // ADD
+		joincmd, err := deployer.GetKubeAdmJoinCommand(vms.MasterNode)
+		if err != nil {
+			fmt.Printf("Failed to join master node: %s\n", err.Error())
+			return
+		}
+		vms.JoinString = joincmd
+		fmt.Printf("Changing cluster with %d nodes...\n", number)
+		toadd := number - answers.WorkerNodes
+		worker := "kubev-esx-worker"
+		if answers.IsVCenter {
+			worker = "kubev-vc-worker"
+		}
+		for i := 0; i < toadd; i++ {
+			newnode := &model.K8sNode{
+				MasterNode: false,
+				VMName:     fmt.Sprintf("%s-%d", worker, i+answers.WorkerNodes+1),
+				Ready:      false,
+			}
+			if err := deployer.DeployWorkderNode(newnode, answers, vms); err != nil {
+				fmt.Printf("Failed to add new worker node %s: %s\n", newnode.VMName, err.Error())
+				break
+			} else {
+				workernodes = append(workernodes, newnode)
+				answers.WorkerNodes = answers.WorkerNodes + 1
+			}
+		}
+
+	}
+
+	vms.WorkerNodes = workernodes
+	utils.SaveK8sNodes(vms)
+	SaveAnswers(answers)
 }

@@ -62,7 +62,7 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 		return nil, err
 	}
 
-	fmt.Printf("%s cloned\n", k8sNodes.MasterNode.VMName)
+	fmt.Printf("%s created\n", k8sNodes.MasterNode.VMName)
 	modify_known_hosts(k8sNodes.MasterNode.IP)
 	if err := ConfigVM(k8sNodes.MasterNode); err != nil {
 		return nil, err
@@ -77,19 +77,9 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 
 	// TODO Do it in parallel
 	for _, vm := range k8sNodes.WorkerNodes {
-		_, err := CreateVM(vm, answers)
-		if err != nil {
+		if err := DeployWorkderNode(vm, answers, k8sNodes); err != nil {
 			return nil, err
 		}
-		fmt.Printf("%s cloned\n", vm.VMName)
-		modify_known_hosts(vm.IP)
-		if err := ConfigVM(vm); err != nil {
-			return nil, err
-		}
-		if err := UpdateWorkerNode(vm, k8sNodes); err != nil {
-			return nil, err
-		}
-
 	}
 
 	k8sNodes.MasterNode.Ready = true
@@ -128,6 +118,34 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 	}
 
 	return k8sNodes, nil
+}
+
+func DeployWorkderNode(vmconfig *model.K8sNode, answers *model.Answers, k8sNodes *model.K8sNodes) error {
+	_, err := CreateVM(vmconfig, answers)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s created\n", vmconfig.VMName)
+	modify_known_hosts(vmconfig.IP)
+	if err := ConfigVM(vmconfig); err != nil {
+		return err
+	}
+	if err := UpdateWorkerNode(vmconfig, k8sNodes); err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteWorkerNodeFromKubenretes(vmconfig *model.K8sNode, k8sNodes *model.K8sNodes) error {
+	runner, _, err := GetSSHRunner(k8sNodes.MasterNode)
+	if err != nil {
+		return err
+	}
+	err = runner.Run(fmt.Sprintf(constants.DeleteWorkNode, vmconfig.VMName))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func setTmpViperToExcludeCredential(answers *model.Answers) {

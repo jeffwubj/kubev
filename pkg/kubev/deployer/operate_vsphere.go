@@ -37,9 +37,6 @@ import (
 )
 
 func DeployOVA(answers *model.Answers, targetpath string) (*object.VirtualMachine, error) {
-
-	// TODO if template VM powered on, we need to delete it, otherwise all cloned VM will have same IP
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -49,12 +46,17 @@ func DeployOVA(answers *model.Answers, targetpath string) (*object.VirtualMachin
 	}
 
 	finder := find.NewFinder(client.Client, true)
+
 	datacenter, err := finder.Datacenter(ctx, answers.Datacenter)
 	if err != nil {
 		return nil, err
 	}
-
 	finder.SetDatacenter(datacenter)
+
+	if err := deleteTemplateVMIfPoweredOn(ctx, finder, answers); err != nil {
+		return nil, err
+	}
+
 	datastore, err := finder.Datastore(ctx, answers.Datastore)
 	if err != nil {
 		return nil, err
@@ -181,13 +183,13 @@ func CreateVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualM
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(o.Name() + " deployed")
+		fmt.Println(o.Name(), "cloned")
 	} else if vmConfig.MasterNode {
 		o, err := DeployOVA(answers, getTemplateVMPath(answers, vmConfig))
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(o.Name() + " deployed")
+		fmt.Println(o.Name(), "cloned")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -269,6 +271,7 @@ func CreateVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualM
 			}
 			cloneSpec.Location = relocateSpec
 
+			fmt.Printf("Clone %s ...\n", vmConfig.VMName)
 			// Clone vm to another vm
 			task, err := vm.Clone(ctx, folder, vmConfig.VMName, *cloneSpec)
 			if err != nil {
@@ -301,6 +304,7 @@ func CreateVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualM
 	}
 
 	if powerstate != types.VirtualMachinePowerStatePoweredOff {
+		fmt.Printf("Power off %s ...\n", vmConfig.VMName)
 		task, err := clonedVM.PowerOff(ctx)
 		if err != nil {
 			return nil, err
@@ -311,6 +315,7 @@ func CreateVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualM
 		}
 	}
 
+	fmt.Printf("Reconfigure %s ...\n", vmConfig.VMName)
 	vmConfigSpec := types.VirtualMachineConfigSpec{}
 	vmConfigSpec.NumCPUs = int32(answers.Cpu)
 	vmConfigSpec.MemoryMB = int64(answers.Memory)
@@ -322,6 +327,8 @@ func CreateVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualM
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("Power on %s ...\n", vmConfig.VMName)
 	task, err = clonedVM.PowerOn(ctx)
 	if err != nil {
 		return nil, err
@@ -331,6 +338,7 @@ func CreateVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualM
 		return nil, err
 	}
 
+	fmt.Printf("Wait IP for %s ...\n", vmConfig.VMName)
 	ip, err := clonedVM.WaitForIP(ctx)
 	if err != nil {
 		return nil, err
@@ -366,6 +374,54 @@ func Destory(answers *model.Answers, k8snodes *model.K8sNodes) error {
 		}
 	}
 
+	return nil
+}
+
+func DestorySingle(answers *model.Answers, k8snode *model.K8sNode) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client, err := driver.NewClient(ctx, answers)
+	if err != nil {
+		return err
+	}
+
+	err = delete(ctx, client, answers, k8snode)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deleteTemplateVMIfPoweredOn(ctx context.Context, finder *find.Finder, answers *model.Answers) error {
+	if answers.IsVCenter {
+		tempatevm, err := finder.VirtualMachine(ctx, getTemplateVMPath(answers, nil))
+		if err == nil {
+			powerstate, err := tempatevm.PowerState(ctx)
+			if err == nil {
+				if powerstate != types.VirtualMachinePowerStatePoweredOff {
+					task, err := tempatevm.PowerOff(ctx)
+					if err != nil {
+						return err
+					}
+					_, err = task.WaitForResult(ctx, nil)
+					if err != nil {
+						return err
+					}
+					task, err = tempatevm.Destroy(ctx)
+					if err != nil {
+						return err
+					}
+					err = task.Wait(ctx)
+					if err != nil {
+						return err
+					}
+					fmt.Printf("%s has been deleted and will redeploy it\n", getTemplateVMPath(answers, nil))
+				}
+			}
+		}
+	}
 	return nil
 }
 

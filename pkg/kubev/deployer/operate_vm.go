@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ThomasRooney/gexpect"
@@ -29,6 +30,21 @@ import (
 	"github.com/pkg/sftp"
 	cryptossh "golang.org/x/crypto/ssh"
 )
+
+func GetKubeAdmJoinCommand(vmconfig *model.K8sNode) (string, error) {
+	runner, _, err := GetSSHRunner(vmconfig)
+	if err != nil {
+		return "", err
+	}
+	output, err := runner.CombinedOutput(constants.KubeAdmJoin)
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(output, "kubeadm join") {
+		return "", fmt.Errorf("Failed to generate join command from master node")
+	}
+	return output, nil
+}
 
 func ConfigVM(vmconfig *model.K8sNode) error {
 	if !needConfigPhoton(vmconfig.IP) {
@@ -40,7 +56,7 @@ func ConfigVM(vmconfig *model.K8sNode) error {
 		return err
 	}
 
-	fmt.Printf("change default password of %s:%s succeed\n", vmconfig.VMName, vmconfig.IP)
+	// fmt.Printf("change default password of %s:%s succeed\n", vmconfig.VMName, vmconfig.IP)
 
 	if err := configSSHInVM(vmconfig); err != nil {
 		fmt.Println("config ssh failed\n")
