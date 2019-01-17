@@ -21,6 +21,7 @@ import (
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/deployer"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
+	"github.com/jeffwubj/kubev/pkg/kubev/utils"
 	"github.com/spf13/cobra"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 )
@@ -29,7 +30,7 @@ import (
 var recoverCmd = &cobra.Command{
 	Use:   "recover",
 	Short: "Find Kubernetes cluster deployed by kubev in your vSphere/ESX",
-	Long:  `Cannot revover from a master node with password changed`,
+	Long:  "Find Kubernetes cluster deployed by kubev in your vSphere/ESX, by recovering a configuration from cluster, your local 'kubev config' result will be overwritten",
 	Run:   runRecover,
 }
 
@@ -71,43 +72,13 @@ func runRecover(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("Found master node at %s\n", vmconfig.IP)
 
-	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteK8sNodesConfigFilePath(), constants.GetK8sNodesConfigFilePath()); err != nil {
-		fmt.Println("Failed to download meta data")
-		return
-	}
-
-	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteKubeVConfigFilePath(), constants.GetKubeVConfigFilePath()); err != nil {
-		fmt.Println("Failed to download meta data")
-		return
-	}
-
-	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteVMPrivateKeyPath(), constants.GetVMPrivateKeyPath()); err != nil {
-		fmt.Println("Failed to download meta data")
-		return
-	}
-
-	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteVMPublicKeyPath(), constants.GetVMPublicKeyPath()); err != nil {
-		fmt.Println("Failed to download meta data")
-		return
-	}
-
-	if err := deployer.DownloadKubeCtlConfig(vmconfig); err != nil {
-		fmt.Println("Failed to download meta data")
-		return
-	}
-
-	fmt.Println("Configuration files recovered")
-
-	username := answers.Username
-	password := answers.Password
-	answers, err = readConfig()
+	answers, _, err = RecoverConfigFilesFromMaster(answers, vmconfig)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	answers.Username = username
-	answers.Password = password
-	SaveAnswers(answers)
+
+	fmt.Println("Configuration files recovered")
 
 	fmt.Printf("Cache %s kits...\n", answers.KubernetesVersion)
 	cacher.CacheAll(answers.KubernetesVersion)
@@ -116,4 +87,45 @@ func runRecover(cmd *cobra.Command, args []string) {
 
 	runInfo(cmd, args)
 
+}
+
+func RecoverConfigFilesFromMaster(answers *model.Answers, vmconfig *model.K8sNode) (*model.Answers, *model.K8sNodes, error) {
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteK8sNodesConfigFilePath(), constants.GetK8sNodesConfigFilePath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return nil, nil, err
+	}
+
+	vms, err := utils.ReadK8sNodes()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteKubeVConfigFilePath(), constants.GetKubeVConfigFilePath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return nil, nil, err
+	}
+	downloadanswers, err := readConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+	downloadanswers.Username = answers.Username
+	downloadanswers.Password = answers.Password
+	SaveAnswers(downloadanswers)
+
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteVMPrivateKeyPath(), constants.GetVMPrivateKeyPath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return nil, nil, err
+	}
+
+	if err := deployer.CopyRemoteFileToLocal(vmconfig, constants.GetRemoteVMPublicKeyPath(), constants.GetVMPublicKeyPath()); err != nil {
+		fmt.Println("Failed to download meta data")
+		return nil, nil, err
+	}
+
+	if err := deployer.DownloadKubeCtlConfig(vmconfig); err != nil {
+		fmt.Println("Failed to download meta data")
+		return nil, nil, err
+	}
+
+	return downloadanswers, vms, nil
 }

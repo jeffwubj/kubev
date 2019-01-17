@@ -57,8 +57,6 @@ func runUse(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Println(ip)
-
 	vmconfig := &model.K8sNode{
 		IP: ip,
 	}
