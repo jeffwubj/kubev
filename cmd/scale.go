@@ -115,10 +115,10 @@ askagain:
 
 	}
 
+	// TODO Below should be called for every node added/deleted, otherwise, ctl+c will break all configurations
 	vms.WorkerNodes = workernodes
 	utils.SaveK8sNodes(vms)
 	SaveAnswers(answers)
-
 	err = deployer.UploadConfigToMasterNode(answers, vms)
 	if err != nil {
 		fmt.Println("Failed to upload kubev config to the cluster")
