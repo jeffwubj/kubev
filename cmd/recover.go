@@ -57,6 +57,7 @@ func runRecover(cmd *cobra.Command, args []string) {
 		answers.Datacenter = "ha-datacenter"
 	}
 
+	fmt.Println("Searching...")
 	vmconfig, err := deployer.FindMasterNode(answers)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -112,5 +113,7 @@ func runRecover(cmd *cobra.Command, args []string) {
 	cacher.CacheAll(answers.KubernetesVersion)
 
 	fmt.Println("All recovered")
+
+	runInfo(cmd, args)
 
 }

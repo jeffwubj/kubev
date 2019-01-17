@@ -90,30 +90,8 @@ func DeployNodes(answers *model.Answers) (*model.K8sNodes, error) {
 
 	utils.SaveK8sNodes(k8sNodes)
 
-	// RISK, WA for now
-	// TODO remove password before upload and re-add password after recovery, password will can be read from user input
-
-	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetK8sNodesConfigFilePath(), constants.GetRemoteK8sNodesConfigFilePath()); err != nil {
-		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
-		return k8sNodes, err
-	}
-
-	tmpfile := constants.GetTmpKubeVConfigFilePath()
-	setTmpViperToExcludeCredential(answers)
-	viper.WriteConfigAs(tmpfile)
-	defer utils.DeleteFile(tmpfile)
-	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, tmpfile, constants.GetRemoteKubeVConfigFilePath()); err != nil {
-		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
-		return k8sNodes, err
-	}
-
-	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetVMPrivateKeyPath(), constants.GetRemoteVMPrivateKeyPath()); err != nil {
-		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
-		return k8sNodes, err
-	}
-
-	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetVMPublicKeyPath(), constants.GetRemoteVMPublicKeyPath()); err != nil {
-		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+	err = UploadConfigToMasterNode(answers, k8sNodes)
+	if err != nil {
 		return k8sNodes, err
 	}
 
@@ -163,4 +141,32 @@ func setTmpViperToExcludeCredential(answers *model.Answers) {
 	viper.Set("kubernetesVersion", answers.KubernetesVersion)
 	viper.Set("workernodes", answers.WorkerNodes)
 	viper.Set("isvcenter", answers.IsVCenter)
+}
+
+func UploadConfigToMasterNode(answers *model.Answers, k8sNodes *model.K8sNodes) error {
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetK8sNodesConfigFilePath(), constants.GetRemoteK8sNodesConfigFilePath()); err != nil {
+		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+		return err
+	}
+
+	tmpfile := constants.GetTmpKubeVConfigFilePath()
+	setTmpViperToExcludeCredential(answers)
+	viper.WriteConfigAs(tmpfile)
+	defer utils.DeleteFile(tmpfile)
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, tmpfile, constants.GetRemoteKubeVConfigFilePath()); err != nil {
+		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+		return err
+	}
+
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetVMPrivateKeyPath(), constants.GetRemoteVMPrivateKeyPath()); err != nil {
+		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+		return err
+	}
+
+	if err := CopyLocalFileToRemote(k8sNodes.MasterNode, constants.GetVMPublicKeyPath(), constants.GetRemoteVMPublicKeyPath()); err != nil {
+		fmt.Println("Failed to upload meta data, but cluster has been deployed successfully")
+		return err
+	}
+
+	return nil
 }

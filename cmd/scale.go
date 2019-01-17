@@ -101,7 +101,7 @@ askagain:
 		for i := 0; i < toadd; i++ {
 			newnode := &model.K8sNode{
 				MasterNode: false,
-				VMName:     fmt.Sprintf("%s-%d", worker, i+answers.WorkerNodes+1),
+				VMName:     fmt.Sprintf("%s-%d", worker, answers.WorkerNodes+1),
 				Ready:      false,
 			}
 			if err := deployer.DeployWorkderNode(newnode, answers, vms); err != nil {
@@ -118,4 +118,9 @@ askagain:
 	vms.WorkerNodes = workernodes
 	utils.SaveK8sNodes(vms)
 	SaveAnswers(answers)
+
+	err = deployer.UploadConfigToMasterNode(answers, vms)
+	if err != nil {
+		fmt.Println("Failed to upload kubev config to the cluster")
+	}
 }
