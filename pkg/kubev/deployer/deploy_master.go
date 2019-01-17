@@ -82,7 +82,7 @@ func UpdateMasterNode(k8snodes *model.K8sNodes) error {
 	// 	fmt.Printf("Failed to link docker, please put %s into your path.\n", dockerLocalPath)
 	// }
 
-	fmt.Println("Deploy master is done")
+	fmt.Println("Install master node finished")
 
 	return nil
 }

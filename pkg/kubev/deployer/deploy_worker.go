@@ -129,7 +129,7 @@ func UpdateWorkerNode(vmconfig *model.K8sNode, k8snodes *model.K8sNodes) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("deploy woker node %s is done\n", vmconfig.VMName)
+	fmt.Printf("Install woker node %s finished\n", vmconfig.VMName)
 
 	return nil
 }

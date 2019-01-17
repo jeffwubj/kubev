@@ -178,19 +178,11 @@ func DeployOVA(answers *model.Answers, targetpath string) (*object.VirtualMachin
 }
 
 func CreateVM(vmConfig *model.K8sNode, answers *model.Answers) (*object.VirtualMachine, error) {
-	if !answers.IsVCenter {
-		o, err := DeployOVA(answers, getTemplateVMPath(answers, vmConfig))
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println(o.Name(), "cloned")
-	} else if vmConfig.MasterNode {
-		o, err := DeployOVA(answers, getTemplateVMPath(answers, vmConfig))
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println(o.Name(), "cloned")
+	o, err := DeployOVA(answers, getTemplateVMPath(answers, vmConfig))
+	if err != nil {
+		return nil, err
 	}
+	fmt.Println(o.Name(), "deployed")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
