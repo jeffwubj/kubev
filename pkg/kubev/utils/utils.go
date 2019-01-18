@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"vmware/f8s/pkg/utils"
 
 	"github.com/jeffwubj/kubev/pkg/kubev/constants"
 	"github.com/jeffwubj/kubev/pkg/kubev/model"
@@ -98,7 +97,7 @@ func ReadK8sNodes() (*model.K8sNodes, error) {
 
 	path := constants.GetK8sNodesConfigFilePath()
 
-	if !utils.FileExists(path) {
+	if !FileExists(path) {
 		return &cc, nil
 	}
 
